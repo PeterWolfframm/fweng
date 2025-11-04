@@ -9,8 +9,8 @@ import HelloWorld from './components/HelloWorld.vue'
 
     <div class="wrapper">
       <HelloWorld msg="You did it!" />
-      <h1 class="text-3xl text-primary-500 font-bold underline">Hello World</h1>
-
+      <h1 class="text-3xl text-green-500 font-bold underline">Hello World</h1>
+      <button class="btn">This is a daisy button</button>
       <nav>
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/about">About</RouterLink>
