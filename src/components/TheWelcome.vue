@@ -1,19 +1,12 @@
 <script setup>
 import WelcomeItem from './WelcomeItem.vue'
-import DocumentationIcon from './icons/IconDocumentation.vue'
-import ToolingIcon from './icons/IconTooling.vue'
-import EcosystemIcon from './icons/IconEcosystem.vue'
-import CommunityIcon from './icons/IconCommunity.vue'
-import SupportIcon from './icons/IconSupport.vue'
 
 const openReadmeInEditor = () => fetch('/__open-in-editor?file=README.md')
 </script>
 
 <template>
   <WelcomeItem>
-    <template #icon>
-      <DocumentationIcon />
-    </template>
+    <template #icon> 📚 </template>
     <template #heading>Documentation</template>
 
     Vue’s
@@ -22,9 +15,7 @@ const openReadmeInEditor = () => fetch('/__open-in-editor?file=README.md')
   </WelcomeItem>
 
   <WelcomeItem>
-    <template #icon>
-      <ToolingIcon />
-    </template>
+    <template #icon> 🔧 </template>
     <template #heading>Tooling</template>
 
     This project is served and bundled with
@@ -49,9 +40,7 @@ const openReadmeInEditor = () => fetch('/__open-in-editor?file=README.md')
   </WelcomeItem>
 
   <WelcomeItem>
-    <template #icon>
-      <EcosystemIcon />
-    </template>
+    <template #icon> 🌱 </template>
     <template #heading>Ecosystem</template>
 
     Get official tools and libraries for your project:
@@ -65,9 +54,7 @@ const openReadmeInEditor = () => fetch('/__open-in-editor?file=README.md')
   </WelcomeItem>
 
   <WelcomeItem>
-    <template #icon>
-      <CommunityIcon />
-    </template>
+    <template #icon> 👥 </template>
     <template #heading>Community</template>
 
     Got stuck? Ask your question on
@@ -83,9 +70,7 @@ const openReadmeInEditor = () => fetch('/__open-in-editor?file=README.md')
   </WelcomeItem>
 
   <WelcomeItem>
-    <template #icon>
-      <SupportIcon />
-    </template>
+    <template #icon> 💚 </template>
     <template #heading>Support Vue</template>
 
     As an independent project, Vue relies on community backing for its sustainability. You can help
