@@ -1,80 +1,70 @@
 <script setup>
-import { ref } from 'vue'
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import TheWelcome from '../components/TheWelcome.vue'
+import articles from '../articles.json'
+import { useViewStore } from '../stores/view'
 
-const isSidebarOpen = ref(true)
+const route = useRoute()
+const viewStore = useViewStore()
 
-const toggleSidebar = () => {
-  isSidebarOpen.value = !isSidebarOpen.value
-}
+const selectedArticle = computed(() => {
+  const title = route.query.title
+  if (!title) return null
+  return articles.find((article) => article.title === title)
+})
 </script>
 
 <template>
-  <main class="relative w-full min-h-screen">
-    <div class="lg:hidden sticky top-0 z-50 bg-transparent backdrop-blur-sm">
-      <div class="navbar">
-        <div class="flex-1 justify-center">
-          <h1 class="text-4xl font-bold">🗣️ yap.</h1>
-        </div>
-      </div>
-    </div>
-
-    <div class="hidden lg:flex w-full min-h-screen">
+  <main class="relative w-full">
+    <!-- Desktop Layout -->
+    <div class="hidden lg:flex w-full h-[calc(100vh-5rem)]">
+      <!-- Left Panel: Yap branding OR Article list (when article is selected) -->
       <aside
         :class="[
-          'sticky top-0 h-screen flex items-center justify-center transition-all duration-300 ease-in-out',
-          isSidebarOpen ? 'w-1/3' : 'w-0',
+          'sticky top-[5rem] h-[calc(100vh-5rem)] overflow-y-auto',
+          selectedArticle ? 'w-1/3' : viewStore.isYapVisible ? 'w-1/3' : 'w-0 overflow-hidden',
         ]"
-        :aria-hidden="!isSidebarOpen"
       >
-        <div
-          :class="[
-            'text-center transition-opacity duration-300',
-            isSidebarOpen ? 'opacity-100' : 'opacity-0',
-          ]"
-        >
+        <!-- Show article list when an article is selected -->
+        <div v-if="selectedArticle" class="w-full p-8">
+          <TheWelcome />
+        </div>
+
+        <!-- Show yap branding when no article is selected -->
+        <div v-else class="w-full px-8 pt-8" :class="{ 'opacity-0': !viewStore.isYapVisible }">
           <h1 class="text-6xl font-bold mb-4">🗣️ yap.</h1>
           <p class="text-lg opacity-70">Scroll to explore</p>
         </div>
       </aside>
+
+      <!-- Main content area -->
       <div
         :class="[
-          'transition-all duration-300 ease-in-out min-h-screen relative',
-          isSidebarOpen ? 'w-2/3' : 'w-full',
+          'flex-1 overflow-y-auto',
+          selectedArticle ? 'w-2/3' : viewStore.isYapVisible ? 'w-2/3' : 'w-full',
         ]"
       >
-        <div class="sticky top-0 z-10 bg-transparent backdrop-blur-sm px-8 py-4 flex items-center gap-4">
-          <button
-            @click="toggleSidebar"
-            class="btn btn-circle btn-ghost flex-shrink-0"
-            :aria-label="isSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'"
-            :aria-expanded="isSidebarOpen"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-6 w-6 transition-transform duration-300"
-              :class="{ 'rotate-180': !isSidebarOpen }"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
-          <h1 v-if="!isSidebarOpen" class="text-3xl font-bold transition-opacity duration-300 flex-1">🗣️ yap.</h1>
-        </div>
+        <!-- Content area -->
         <div class="p-8">
-          <TheWelcome />
+          <!-- Article content view -->
+          <div v-if="selectedArticle" class="article-content max-w-4xl">
+            <h1 class="text-5xl font-bold mb-8">{{ selectedArticle.title }}</h1>
+            <div class="text-xl leading-relaxed opacity-80" v-html="selectedArticle.content"></div>
+          </div>
+          <!-- Article list view -->
+          <TheWelcome v-else />
         </div>
       </div>
     </div>
+
+    <!-- Mobile Layout -->
     <div class="lg:hidden p-6">
-      <TheWelcome />
+      <div v-if="selectedArticle" class="article-content">
+        <h1 class="text-4xl font-bold mb-6">{{ selectedArticle.title }}</h1>
+        <div class="text-lg leading-relaxed opacity-80" v-html="selectedArticle.content"></div>
+      </div>
+      <TheWelcome v-else />
     </div>
   </main>
 </template>

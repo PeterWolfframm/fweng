@@ -46,7 +46,7 @@ onMounted(() => {
 <template>
   <button
     @click="toggleTheme"
-    class="bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 cursor-pointer text-xl transition-all duration-300 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500 hover:scale-105 active:scale-95"
+    class="bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 cursor-pointer text-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500"
     :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
     title="Toggle theme"
   >
