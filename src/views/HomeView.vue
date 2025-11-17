@@ -1,80 +1,93 @@
 <script setup>
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import TheWelcome from '../components/TheWelcome.vue'
+import { useRouter } from 'vue-router'
+import EmojiContainer from '../components/EmojiContainer.vue'
 import articles from '../articles.json'
-import { useViewStore } from '../stores/view'
 
-const route = useRoute()
-const viewStore = useViewStore()
+const router = useRouter()
 
-const selectedArticle = computed(() => {
-  const title = route.query.title
-  if (!title) return null
-  return articles.find((article) => article.title === title)
+const uniqueEmojiCombinations = computed(() => {
+  const emojiSet = new Set()
+  articles.forEach((article) => {
+    if (article.icon) {
+      emojiSet.add(article.icon)
+    }
+  })
+  return Array.from(emojiSet)
 })
+
+const navigateToArticle = (title) => {
+  router.push(`/articles/${encodeURIComponent(title)}`)
+}
 </script>
 
 <template>
-  <main class="relative w-full">
-    <!-- Desktop Layout -->
+  <main class="relative w-full p-0 m-0 max-w-full overflow-x-hidden">
     <div class="hidden lg:flex w-full h-[calc(100vh-5rem)]">
-      <!-- Left Panel: Yap branding OR Article list (when article is selected) -->
-      <aside
-        :class="[
-          'sticky top-[5rem] h-[calc(100vh-5rem)] overflow-y-auto',
-          selectedArticle ? 'w-1/3' : viewStore.isYapVisible ? 'w-1/3' : 'w-0 overflow-hidden',
-        ]"
-      >
-        <!-- Show article list when an article is selected -->
-        <div v-if="selectedArticle" class="w-full p-8">
-          <TheWelcome />
-        </div>
-
-        <!-- Show yap branding when no article is selected -->
-        <div v-else class="w-full px-8 pt-8" :class="{ 'opacity-0': !viewStore.isYapVisible }">
-          <h1 class="text-6xl font-bold mb-4">🗣️ yap.</h1>
-          <p class="text-lg opacity-70">Scroll to explore</p>
+      <aside class="w-1/3 sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto">
+        <div class="w-full px-8 pt-8">
+          <h1 class="text-6xl font-bold mb-8">🗣️ yap.</h1>
+          <div class="mt-12 space-y-8">
+            <div
+              v-for="(emoji, index) in uniqueEmojiCombinations"
+              :key="index"
+              class="flex items-center justify-start py-2 transition-transform duration-200 ease-in-out hover:tranemerald-x-1"
+            >
+              <div
+                class="[&_.emoji-container]:static [&_.emoji-container]:w-20 [&_.emoji-container]:h-[60px] [&_.emoji-container]:m-0 [&_.emoji-container]:shadow-md [&_.emoji-container]:transition-all [&_.emoji-container]:duration-300 [&_.emoji-container]:ease-in-out hover:[&_.emoji-container]:shadow-[0_4px_12px_rgba(16,185,129,0.2)] hover:[&_.emoji-container]:scale-105"
+              >
+                <EmojiContainer>
+                  {{ emoji }}
+                </EmojiContainer>
+              </div>
+            </div>
+          </div>
         </div>
       </aside>
 
-      <!-- Main content area -->
-      <div
-        :class="[
-          'flex-1 overflow-y-auto',
-          selectedArticle ? 'w-2/3' : viewStore.isYapVisible ? 'w-2/3' : 'w-full',
-        ]"
-      >
-        <!-- Content area -->
+      <div class="flex-1 w-2/3 overflow-y-auto">
         <div class="p-8">
-          <!-- Article content view -->
-          <div v-if="selectedArticle" class="article-content max-w-4xl">
-            <h1 class="text-5xl font-bold mb-8">{{ selectedArticle.title }}</h1>
-            <div class="text-xl leading-relaxed opacity-80" v-html="selectedArticle.content"></div>
+          <div
+            v-for="article in articles"
+            :key="article.id"
+            @click="navigateToArticle(article.title)"
+            class="group mt-8 flex relative p-4 rounded-xl border-2 border-transparent cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)] lg:mt-0 lg:py-6 lg:px-4 lg:pl-20 before:content-[''] before:border-l before:border-gray-300 dark:before:border-gray-700 before:absolute before:left-0 before:bottom-[calc(50%+25px)] before:h-[calc(50%-25px)] before:hidden before:lg:block after:content-[''] after:border-l after:border-gray-300 dark:after:border-gray-700 after:absolute after:left-0 after:top-[calc(50%+25px)] after:h-[calc(50%-25px)] after:hidden after:lg:block first:before:hidden! last:after:hidden!"
+          >
+            <EmojiContainer>
+              {{ article.icon }}
+            </EmojiContainer>
+            <div class="flex-1 ml-4">
+              <h3
+                class="text-xl font-medium mb-1.5 text-gray-900 dark:text-white group-hover:text-emerald-500"
+              >
+                {{ article.title }}
+              </h3>
+              <div v-html="article.content"></div>
+            </div>
           </div>
-          <!-- Article list view -->
-          <TheWelcome v-else />
         </div>
       </div>
     </div>
 
-    <!-- Mobile Layout -->
     <div class="lg:hidden p-6">
-      <div v-if="selectedArticle" class="article-content">
-        <h1 class="text-4xl font-bold mb-6">{{ selectedArticle.title }}</h1>
-        <div class="text-lg leading-relaxed opacity-80" v-html="selectedArticle.content"></div>
+      <div
+        v-for="article in articles"
+        :key="article.id"
+        @click="navigateToArticle(article.title)"
+        class="group mt-8 flex relative p-4 rounded-xl border-2 border-transparent cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)]"
+      >
+        <EmojiContainer>
+          {{ article.icon }}
+        </EmojiContainer>
+        <div class="flex-1 ml-4">
+          <h3
+            class="text-xl font-medium mb-1.5 text-gray-900 dark:text-white group-hover:text-emerald-500"
+          >
+            {{ article.title }}
+          </h3>
+          <div v-html="article.content"></div>
+        </div>
       </div>
-      <TheWelcome v-else />
     </div>
   </main>
 </template>
-
-<style scoped>
-main {
-  padding: 0;
-  margin: 0;
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-</style>

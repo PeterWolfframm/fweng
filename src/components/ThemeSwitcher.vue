@@ -12,10 +12,8 @@ const applyTheme = (dark, saveToStorage = true) => {
   const html = document.documentElement
   if (dark) {
     html.classList.add('dark')
-    html.classList.remove('light')
   } else {
     html.classList.remove('dark')
-    html.classList.add('light')
   }
   if (saveToStorage) {
     localStorage.setItem('theme', dark ? 'dark' : 'light')
@@ -28,11 +26,9 @@ onMounted(() => {
     isDark.value = savedTheme === 'dark'
     applyTheme(isDark.value, false)
   } else {
-    // Check system preference
     isDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches
-    applyTheme(isDark.value, false) // Apply the initial theme
+    applyTheme(isDark.value, false)
 
-    // Listen for system preference changes
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
       if (!localStorage.getItem('theme')) {
         isDark.value = e.matches
