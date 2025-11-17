@@ -10,14 +10,29 @@ const router = createRouter({
       component: HomeView,
     },
     {
-      path: '/articles',
-      name: 'articles',
-      component: () => import('../views/ArticleView.vue'),
+      path: '/posts',
+      name: 'posts',
+      component: () => import('../views/PostView.vue'),
     },
     {
-      path: '/articles/:title',
-      name: 'article-detail',
-      component: () => import('../views/ArticleView.vue'),
+      path: '/posts/:title',
+      name: 'post-detail',
+      component: () => import('../views/PostView.vue'),
+    },
+    {
+      path: '/users',
+      name: 'users',
+      component: () => import('../views/UserView.vue'),
+    },
+    {
+      path: '/groups',
+      name: 'groups',
+      component: () => import('../views/GroupView.vue'),
+    },
+    {
+      path: '/imprint',
+      name: 'imprint',
+      component: ()  => import('../views/ImprintView.vue'),
     },
   ],
 })

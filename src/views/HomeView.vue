@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import EmojiContainer from '../components/EmojiContainer.vue'
-import articles from '../articles.json'
+import articles from '../posts.json'
 
 const router = useRouter()
 

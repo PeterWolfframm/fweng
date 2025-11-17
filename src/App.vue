@@ -7,17 +7,17 @@ const route = useRoute()
 const router = useRouter()
 
 const isHome = computed(() => route.path === '/')
-const isArticles = computed(() => route.path.startsWith('/articles'))
+const isArticles = computed(() => route.path.startsWith('/posts'))
 
 const navigationLabel = computed(() => {
-  if (isHome.value) return 'articles'
+  if (isHome.value) return 'posts'
   if (isArticles.value) return 'home'
   return 'home'
 })
 
 const handleNavigation = () => {
   if (isHome.value) {
-    router.push('/articles')
+    router.push('/posts')
   } else {
     router.push('/')
   }
@@ -47,7 +47,11 @@ const handleNavigation = () => {
           >
             {{ navigationLabel }}
           </button>
-          <ThemeSwitcher />
+
+          <router-link to="/groups" class="btn btn-ghost text-base font-medium">groups</router-link>
+          <router-link to="/imprint" class="btn btn-ghost text-base font-medium">imprint</router-link>
+          <router-link to="/users" class="btn btn-ghost text-base font-medium">users</router-link>
+
         </div>
 
         <div class="flex-none lg:hidden">
