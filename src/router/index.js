@@ -20,6 +20,11 @@ const router = createRouter({
       component: () => import('../views/PostView.vue'),
     },
     {
+      path: '/users',
+      name: 'users',
+      component: () => import('../views/UserView.vue'),
+    },
+    {
       path: '/groups',
       name: 'groups',
       component: () => import('../views/GroupView.vue'),
