@@ -58,7 +58,7 @@ const navigateToArticle = (title) => {
             </EmojiContainer>
             <div class="flex-1 ml-4">
               <h3
-                class="text-xl font-medium mb-1.5 text-gray-900 dark:text-white group-hover:text-emerald-500"
+                class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600"
               >
                 {{ article.title }}
               </h3>
@@ -81,7 +81,7 @@ const navigateToArticle = (title) => {
         </EmojiContainer>
         <div class="flex-1 ml-4">
           <h3
-            class="text-xl font-medium mb-1.5 text-gray-900 dark:text-white group-hover:text-emerald-500"
+            class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600"
           >
             {{ article.title }}
           </h3>
