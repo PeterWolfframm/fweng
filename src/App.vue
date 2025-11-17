@@ -48,6 +48,7 @@ const handleNavigation = () => {
             {{ navigationLabel }}
           </button>
 
+          <router-link to="/groups" class="btn btn-ghost text-base font-medium">groups</router-link>
           <router-link to="/imprint" class="btn btn-ghost text-base font-medium">imprint</router-link>
 
         </div>

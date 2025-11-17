@@ -20,6 +20,11 @@ const router = createRouter({
       component: () => import('../views/PostView.vue'),
     },
     {
+      path: '/groups',
+      name: 'groups',
+      component: () => import('../views/GroupView.vue'),
+    },
+    {
       path: '/imprint',
       name: 'imprint',
       component: ()  => import('../views/ImprintView.vue'),
