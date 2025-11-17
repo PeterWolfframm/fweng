@@ -40,6 +40,14 @@ const handleNavigation = () => {
         </div>
 
         <div class="hidden lg:flex flex-none gap-4 items-center">
+        <router-link to="/login" class="btn btn-ghost text-base font-medium hover:opacity-70">
+          Login
+        </router-link>
+
+        <router-link to="/register" class="btn btn-primary text-base font-medium">
+          Registrieren
+        </router-link>
+
           <button
             @click="handleNavigation"
             class="btn btn-ghost text-base font-medium hover:opacity-70"
@@ -50,7 +58,9 @@ const handleNavigation = () => {
           <ThemeSwitcher />
         </div>
 
-        <div class="flex-none lg:hidden">
+        <div class="flex-none lg:hidden flex items-center gap-2">
+          <router-link to="/login" class="btn btn-ghost btn-sm">Login</router-link>
+          <router-link to="/register" class="btn btn-primary btn-sm">Registrieren</router-link>
           <ThemeSwitcher />
         </div>
       </div>
