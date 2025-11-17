@@ -37,3 +37,30 @@
     </p>
   </div>
 </template>
+
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+// Demo-User
+const demoUser = {
+  email: 'wi23b010@technikum.at',
+  password: 'Test1234'
+}
+
+const email = ref('')
+const password = ref('')
+
+// Login-Funktion
+function login() {
+  if (email.value === demoUser.email && password.value === demoUser.password) {
+    alert('Login erfolgreich!')
+    router.push('/')   // Weiterleitung zur Startseite
+  } else {
+    alert('Email oder Passwort falsch!')
+  }
+}
+</script>
+
