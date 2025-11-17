@@ -37,10 +37,8 @@ const navigateToArticle = (title) => {
             <EmojiContainer>
               {{ article.icon }}
             </EmojiContainer>
-            <div class="flex-1 ml-4">
-              <h3
-                class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600"
-              >
+            <div class="flex-1 ml-6">
+              <h3 class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600">
                 {{ article.title }}
               </h3>
               <div class="text-sm opacity-70" v-html="article.content"></div>
@@ -71,9 +69,7 @@ const navigateToArticle = (title) => {
             {{ article.icon }}
           </EmojiContainer>
           <div class="flex-1 ml-4">
-            <h3
-              class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600"
-            >
+            <h3 class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600">
               {{ article.title }}
             </h3>
             <div v-html="article.content"></div>
@@ -104,9 +100,7 @@ const navigateToArticle = (title) => {
             {{ article.icon }}
           </EmojiContainer>
           <div class="flex-1 ml-4">
-            <h3
-              class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600"
-            >
+            <h3 class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600">
               {{ article.title }}
             </h3>
             <div class="text-sm opacity-70" v-html="article.content"></div>
