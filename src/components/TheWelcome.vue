@@ -4,7 +4,6 @@ import WelcomeItem from './WelcomeItem.vue'
 const openReadmeInEditor = () => fetch('/__open-in-editor?file=README.md')
 
 const welcomeItems = [
-  // Lana Del Rey Posts
   {
     id: 1,
     icon: '🎤🌙💔',
@@ -83,8 +82,6 @@ const welcomeItems = [
     heading: 'The Art of Longing',
     content: 'Discovering how desire and yearning become central emotional threads throughout her most powerful compositions.'
   },
-  
-  // Fighter Jets Posts
   {
     id: 14,
     icon: '✈️💨🔥',
@@ -163,8 +160,6 @@ const welcomeItems = [
     heading: 'NATO Air Operations',
     content: 'How allied nations coordinate military aviation, share resources, and conduct joint air defense operations.'
   },
-  
-  // Road Biking Posts
   {
     id: 27,
     icon: '🚴🛣️🌄',

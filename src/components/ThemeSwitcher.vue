@@ -23,21 +23,20 @@ const applyTheme = (dark, saveToStorage = true) => {
 }
 
 onMounted(() => {
-  // Check localStorage first
   const savedTheme = localStorage.getItem('theme')
   if (savedTheme) {
-    // User has explicitly set a preference
     isDark.value = savedTheme === 'dark'
-    applyTheme(isDark.value, false) // Don't save again, already saved
+    applyTheme(isDark.value, false)
   } else {
-    // No saved preference - check system preference for UI state only
-    // Don't apply class, let CSS media query handle it
+    // Check system preference
     isDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches
+    applyTheme(isDark.value, false) // Apply the initial theme
+
     // Listen for system preference changes
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-      // Only update if user hasn't set explicit preference
       if (!localStorage.getItem('theme')) {
         isDark.value = e.matches
+        applyTheme(e.matches, false)
       }
     })
   }
