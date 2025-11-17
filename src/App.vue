@@ -1,85 +1,63 @@
 <script setup>
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+import { computed } from 'vue'
+import { RouterView, useRoute, useRouter } from 'vue-router'
+import ThemeSwitcher from './components/ThemeSwitcher.vue'
+
+const route = useRoute()
+const router = useRouter()
+
+const isHome = computed(() => route.path === '/')
+const isArticles = computed(() => route.path.startsWith('/articles'))
+
+const navigationLabel = computed(() => {
+  if (isHome.value) return 'articles'
+  if (isArticles.value) return 'home'
+  return 'home'
+})
+
+const handleNavigation = () => {
+  if (isHome.value) {
+    router.push('/articles')
+  } else {
+    router.push('/')
+  }
+}
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
+  <header class="fixed top-0 left-0 right-0 z-50 bg-transparent backdrop-blur-sm">
+    <div class="px-4 lg:px-8 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex-1">
+          <router-link to="/">
+          <h1
+              class="text-3xl lg:text-4xl font-bold cursor-pointer hover:opacity-80 transition-opacity"
+              :class="{ 'lg:opacity-0 lg:pointer-events-none': isHome }"
+          >
+            🗣️ yap.
+          </h1>
+          </router-link>
+        </div>
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
+        <div class="hidden lg:flex flex-none gap-4 items-center">
+          <button
+            @click="handleNavigation"
+            class="btn btn-ghost text-base font-medium hover:opacity-70"
+            :aria-label="`Go to ${navigationLabel}`"
+          >
+            {{ navigationLabel }}
+          </button>
+          <ThemeSwitcher />
+        </div>
 
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
+        <div class="flex-none lg:hidden">
+          <ThemeSwitcher />
+        </div>
+      </div>
     </div>
   </header>
 
-  <RouterView />
+  <div class="pt-20">
+    <RouterView />
+  </div>
 </template>
-
-<style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
-}
-
-nav a.router-link-exact-active {
-  color: var(--color-text);
-}
-
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
-}
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
-}
-
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
-}
-</style>
