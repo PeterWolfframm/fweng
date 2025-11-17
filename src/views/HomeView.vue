@@ -83,6 +83,8 @@ const toggleSidebar = () => {
 main {
   padding: 0;
   margin: 0;
-  width: 100vw;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 </style>
