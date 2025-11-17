@@ -40,13 +40,6 @@ const handleNavigation = () => {
         </div>
 
         <div class="hidden lg:flex flex-none gap-4 items-center">
-        <router-link to="/login" class="btn btn-ghost text-base font-medium hover:opacity-70">
-          Login
-        </router-link>
-
-        <router-link to="/register" class="btn btn-primary text-base font-medium">
-          Registrieren
-        </router-link>
 
           <button
             @click="handleNavigation"
@@ -57,8 +50,16 @@ const handleNavigation = () => {
           </button>
 
           <router-link to="/groups" class="btn btn-ghost text-base font-medium">groups</router-link>
-          <router-link to="/imprint" class="btn btn-ghost text-base font-medium">imprint</router-link>
           <router-link to="/users" class="btn btn-ghost text-base font-medium">users</router-link>
+          <router-link to="/imprint" class="btn btn-ghost text-base font-medium">imprint</router-link>
+          <router-link to="/help" class="btn btn-ghost text-base font-medium">help</router-link>
+          <router-link to="/login" class="btn btn-ghost text-base font-medium hover:opacity-70">
+            Login
+          </router-link>
+
+          <router-link to="/register" class="btn btn-primary text-base font-medium">
+            Register
+          </router-link>
 
         </div>
 
