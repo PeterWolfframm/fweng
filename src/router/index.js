@@ -25,8 +25,18 @@ const router = createRouter({
       component: () => import('../views/UserView.vue'),
     },
     {
+      path: '/users/:name',
+      name: 'users-detail',
+      component: () => import('../views/UserView.vue'),
+    },
+    {
       path: '/groups',
       name: 'groups',
+      component: () => import('../views/GroupView.vue'),
+    },
+    {
+      path: '/groups/:name',
+      name: 'groups-detail',
       component: () => import('../views/GroupView.vue'),
     },
     {

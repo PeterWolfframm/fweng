@@ -27,7 +27,7 @@ const navigateToUser = (name) => {
             v-for="user in users"
             :key="user.id"
             @click="navigateToUser(user.name)"
-            class="user mt-8 flex relative p-4 rounded-xl border-2 cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)] lg:mt-0 lg:py-6 lg:px-4 lg:pl-20 before:content-[''] before:border-l before:border-gray-300 dark:before:border-gray-700 before:absolute before:left-0 before:bottom-[calc(50%+25px)] before:h-[calc(50%-25px)] before:hidden before:lg:block after:content-[''] after:border-l after:border-gray-300 dark:after:border-gray-700 after:absolute after:left-0 after:top-[calc(50%+25px)] after:h-[calc(50%-25px)] after:hidden after:lg:block first:before:hidden! last:after:hidden!"
+            class="group mt-8 flex relative p-4 rounded-xl border-2 cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)] lg:mt-0 lg:py-6 lg:px-4 lg:pl-12 before:content-[''] before:border-l before:border-gray-300 dark:before:border-gray-700 before:absolute before:left-0 before:bottom-[calc(50%+25px)] before:h-[calc(50%-25px)] before:hidden before:lg:block after:content-[''] after:border-l after:border-gray-300 dark:after:border-gray-700 after:absolute after:left-0 after:top-[calc(50%+25px)] after:h-[calc(50%-25px)] after:hidden after:lg:block first:before:hidden! last:after:hidden!"
             :class="
               currentUser && currentUser.name === user.name
                 ? 'bg-emerald-500/10 border-emerald-500'
@@ -43,7 +43,7 @@ const navigateToUser = (name) => {
               >
                 {{ user.name }}
               </h3>
-              <div class="text-sm opacity-70" v-html="user.email"></div>
+
             </div>
           </div>
         </div>
@@ -53,7 +53,7 @@ const navigateToUser = (name) => {
         <div class="p-8">
           <div class="post-content max-w-4xl">
             <h1 class="text-5xl font-bold mb-8">{{ currentUser.name }}</h1>
-
+            <div class="text-xl leading-relaxed opacity-80" v-html="currentUser.email"></div>
           </div>
         </div>
       </div>
@@ -76,29 +76,29 @@ const navigateToUser = (name) => {
             >
               {{ user.name }}
             </h3>
-
+            <div v-html="user.email"></div>
           </div>
         </div>
       </div>
     </div>
 
     <div class="lg:hidden p-6">
-      <div v-if="currentUser" class="user-content">
+      <div v-if="currentUser" class="group-content">
         <button
-          @click="router.push('/user')"
+          @click="router.push('/groups')"
           class="mb-6 text-emerald-500 hover:opacity-70 flex items-center gap-2"
         >
-          ← Back to Home
+          ← Back to articles
         </button>
         <h1 class="text-4xl font-bold mb-6">{{ currentUser.name }}</h1>
-
+        <div class="text-lg leading-relaxed opacity-80" v-html="currentUser.email"></div>
       </div>
       <div v-else>
         <div
           v-for="user in users"
           :key="user.id"
           @click="navigateToUser(user.name)"
-          class="user mt-8 flex relative p-4 rounded-xl border-2 border-transparent cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)]"
+          class="group mt-8 flex relative p-4 rounded-xl border-2 border-transparent cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)]"
         >
           <EmojiContainer>
             {{ user.icon }}
@@ -109,7 +109,7 @@ const navigateToUser = (name) => {
             >
               {{ user.name }}
             </h3>
-
+            <div class="text-sm opacity-70" v-html="user.email"></div>
           </div>
         </div>
       </div>
