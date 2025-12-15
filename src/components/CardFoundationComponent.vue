@@ -23,7 +23,7 @@ const props = defineProps({
 
 const getBaseClasses = () => {
   const base =
-    'group flex relative p-4 rounded-xl border-2 cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)]'
+    'group flex relative w-full p-4 rounded-xl border-2 cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)]'
 
   const variantClasses = {
     sidebar:

@@ -11,8 +11,7 @@ const profileCards = [
     id: 'info',
     emoji: '👤📊📊',
     title: 'Profile Information',
-    description:
-      'Your personal details and account settings asdofkjasdfj asdlfkjasdlkf asdlfkjasdlkfj asdlfkjasldkfja asdlkfjalskdjf',
+    description: 'Your personal details and account settings',
   },
   {
     id: 'activity',
