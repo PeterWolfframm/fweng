@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TwoColumnLayout from '../components/TwoColumnLayout.vue'
+import FullScreenWidth from '../components/FullScreenWidth.vue'
 import GroupPreviewCard from '../components/GroupPreviewCard.vue'
 import PostPreviewCard from '../components/PostPreviewCard.vue'
 import DetailHeader from '../components/DetailHeader.vue'
@@ -67,19 +68,17 @@ const groupPosts = computed(() => {
     </template>
   </TwoColumnLayout>
 
-  <main v-else class="relative w-full p-0 m-0 max-w-full overflow-x-hidden">
-    <div class="hidden lg:block w-full">
-      <div class="p-8 max-w-7xl mx-auto">
-        <GroupPreviewCard
-          v-for="group in groups"
-          :key="group.id"
-          :group="group"
-          variant="main"
-        />
-      </div>
-    </div>
+  <FullScreenWidth v-else>
+    <template #desktop>
+      <GroupPreviewCard
+        v-for="group in groups"
+        :key="group.id"
+        :group="group"
+        variant="main"
+      />
+    </template>
 
-    <div class="lg:hidden p-6">
+    <template #mobile>
       <GroupPreviewCard
         v-for="group in groups"
         :key="group.id"
@@ -87,6 +86,6 @@ const groupPosts = computed(() => {
         variant="mobile"
         contentClass="text-sm opacity-70"
       />
-    </div>
-  </main>
+    </template>
+  </FullScreenWidth>
 </template>
