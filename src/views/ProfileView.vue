@@ -14,16 +14,6 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-const formData = ref({
-  username: authStore.currentUser?.username || '',
-  email: authStore.currentUser?.email || '',
-})
-
-const inputGroupRef = ref(null)
-
-const errorMessage = ref('')
-const successMessage = ref('')
-
 const currentSection = computed(() => {
   return route.params.section || 'memberships'
 })
@@ -56,41 +46,6 @@ const userPosts = computed(() => {
 const navigateToSection = (sectionId) => {
   if (sectionId === currentSection.value) return
   router.push(`/profile/${sectionId}`)
-}
-
-watch(currentSection, () => {
-  errorMessage.value = ''
-  successMessage.value = ''
-})
-
-const updateSettings = async () => {
-  errorMessage.value = ''
-  successMessage.value = ''
-
-  try {
-    const inputData = inputGroupRef.value?.formData || formData.value
-    const updates = {}
-
-    if (inputData.username !== authStore.currentUser?.username) {
-      updates.username = inputData.username
-    }
-
-    if (inputData.email !== authStore.currentUser?.email) {
-      updates.email = inputData.email
-    }
-
-    if (Object.keys(updates).length > 0) {
-      authStore.updateProfile(updates)
-      successMessage.value = 'Settings updated successfully!'
-    }
-  } catch (error) {
-    errorMessage.value = error.message
-  }
-}
-
-const handleInputGroupUpdate = (data) => {
-  formData.value.username = data.username
-  formData.value.email = data.email
 }
 </script>
 
@@ -221,41 +176,9 @@ const handleInputGroupUpdate = (data) => {
               </p>
             </div>
 
-            <div
-              v-if="errorMessage"
-              class="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 flex items-start gap-3"
-            >
-              <span class="text-xl">⚠️</span>
-              <span>{{ errorMessage }}</span>
+            <div class="space-y-6">
+              <InputGroupComponent />
             </div>
-
-            <div
-              v-if="successMessage"
-              class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-start gap-3"
-            >
-              <span class="text-xl">✓</span>
-              <span>{{ successMessage }}</span>
-            </div>
-
-            <form @submit.prevent="updateSettings" class="space-y-6">
-              <InputGroupComponent ref="inputGroupRef" @update="handleInputGroupUpdate" />
-
-              <div class="flex gap-4">
-                <button
-                  type="submit"
-                  class="flex-1 px-6 py-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30"
-                >
-                  💾 Save Changes
-                </button>
-                <button
-                  type="button"
-                  @click="navigateToSection('memberships')"
-                  class="px-6 py-4 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       </TwoColumnLayoutRightSideWrapper>
@@ -344,41 +267,9 @@ const handleInputGroupUpdate = (data) => {
             <p class="text-gray-600 dark:text-gray-400">Manage your account</p>
           </div>
 
-          <div
-            v-if="errorMessage"
-            class="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm flex items-start gap-2"
-          >
-            <span>⚠️</span>
-            <span>{{ errorMessage }}</span>
+          <div class="space-y-4">
+            <InputGroupComponent />
           </div>
-
-          <div
-            v-if="successMessage"
-            class="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 text-sm flex items-start gap-2"
-          >
-            <span>✓</span>
-            <span>{{ successMessage }}</span>
-          </div>
-
-          <form @submit.prevent="updateSettings" class="space-y-4">
-            <InputGroupComponent ref="inputGroupRef" @update="handleInputGroupUpdate" />
-
-            <div class="grid grid-cols-2 gap-3">
-              <button
-                type="submit"
-                class="px-6 py-3 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all"
-              >
-                💾 Save
-              </button>
-              <button
-                type="button"
-                @click="navigateToSection('memberships')"
-                class="px-6 py-3 rounded-xl border-2 border-gray-300 dark:border-gray-700 font-medium transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
         </div>
       </div>
     </template>
