@@ -64,6 +64,11 @@ const router = createRouter({
       name: 'profile',
       component: () => import('../views/ProfileView.vue'),
     },
+    {
+      path: '/profile/:section',
+      name: 'profile-section',
+      component: () => import('../views/ProfileView.vue'),
+    },
   ],
 })
 

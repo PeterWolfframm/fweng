@@ -60,4 +60,3 @@ const getBorderClasses = () => {
     </div>
   </div>
 </template>
-
