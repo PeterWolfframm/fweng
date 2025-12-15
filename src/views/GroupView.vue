@@ -88,7 +88,7 @@ const navigateToGroup = (name) => {
           @click="router.push('/groups')"
           class="mb-6 text-emerald-500 hover:opacity-70 flex items-center gap-2"
         >
-          ← Back to articles
+          ← Back to groups
         </button>
         <h1 class="text-4xl font-bold mb-6">{{ currentGroup.name }}</h1>
         <div class="text-lg leading-relaxed opacity-80" v-html="currentGroup.description"></div>

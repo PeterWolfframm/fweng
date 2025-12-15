@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import EmojiContainer from '../components/EmojiContainer.vue'
+import PostPreviewCard from '../components/PostPreviewCard.vue'
 import posts from '../posts.json'
 
 const route = useRoute()
@@ -12,10 +12,6 @@ const currentPost = computed(() => {
   if (!title) return null
   return posts.find((post) => post.title === title)
 })
-
-const navigateToPost = (title) => {
-  router.push(`/posts/${encodeURIComponent(title)}`)
-}
 </script>
 
 <template>
@@ -23,29 +19,14 @@ const navigateToPost = (title) => {
     <div v-if="currentPost" class="hidden lg:flex w-full h-[calc(100vh-5rem)]">
       <aside class="w-1/3 sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto">
         <div class="w-full p-8">
-          <div
+          <PostPreviewCard
             v-for="post in posts"
             :key="post.id"
-            @click="navigateToPost(post.title)"
-            class="group mt-8 flex relative p-4 rounded-xl border-2 cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)] lg:mt-0 lg:py-6 lg:px-4 lg:pl-20 before:content-[''] before:border-l before:border-gray-300 dark:before:border-gray-700 before:absolute before:left-0 before:bottom-[calc(50%+25px)] before:h-[calc(50%-25px)] before:hidden before:lg:block after:content-[''] after:border-l after:border-gray-300 dark:after:border-gray-700 after:absolute after:left-0 after:top-[calc(50%+25px)] after:h-[calc(50%-25px)] after:hidden after:lg:block first:before:hidden! last:after:hidden!"
-            :class="
-              currentPost && currentPost.title === post.title
-                ? 'bg-emerald-500/10 border-emerald-500'
-                : 'border-transparent'
-            "
-          >
-            <EmojiContainer>
-              {{ post.icon }}
-            </EmojiContainer>
-            <div class="flex-1 ml-4">
-              <h3
-                class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600"
-              >
-                {{ post.title }}
-              </h3>
-              <div class="text-sm opacity-70" v-html="post.content"></div>
-            </div>
-          </div>
+            :post="post"
+            :isActive="currentPost && currentPost.title === post.title"
+            variant="sidebar"
+            contentClass="text-sm opacity-70"
+          />
         </div>
       </aside>
 
@@ -61,24 +42,7 @@ const navigateToPost = (title) => {
 
     <div v-else class="hidden lg:block w-full">
       <div class="p-8 max-w-7xl mx-auto">
-        <div
-          v-for="post in posts"
-          :key="post.id"
-          @click="navigateToPost(post.title)"
-          class="group mt-8 flex relative p-4 rounded-xl border-2 border-transparent cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)] lg:mt-0 lg:py-6 lg:px-4 lg:pl-20 before:content-[''] before:border-l before:border-gray-300 dark:before:border-gray-700 before:absolute before:left-0 before:bottom-[calc(50%+25px)] before:h-[calc(50%-25px)] before:hidden before:lg:block after:content-[''] after:border-l after:border-gray-300 dark:after:border-gray-700 after:absolute after:left-0 after:top-[calc(50%+25px)] after:h-[calc(50%-25px)] after:hidden after:lg:block first:before:hidden! last:after:hidden!"
-        >
-          <EmojiContainer>
-            {{ post.icon }}
-          </EmojiContainer>
-          <div class="flex-1 ml-4">
-            <h3
-              class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600"
-            >
-              {{ post.title }}
-            </h3>
-            <div v-html="post.content"></div>
-          </div>
-        </div>
+        <PostPreviewCard v-for="post in posts" :key="post.id" :post="post" variant="main" />
       </div>
     </div>
 
@@ -94,24 +58,13 @@ const navigateToPost = (title) => {
         <div class="text-lg leading-relaxed opacity-80" v-html="currentPost.content"></div>
       </div>
       <div v-else>
-        <div
+        <PostPreviewCard
           v-for="post in posts"
           :key="post.id"
-          @click="navigateToPost(post.title)"
-          class="group mt-8 flex relative p-4 rounded-xl border-2 border-transparent cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)]"
-        >
-          <EmojiContainer>
-            {{ post.icon }}
-          </EmojiContainer>
-          <div class="flex-1 ml-4">
-            <h3
-              class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600"
-            >
-              {{ post.title }}
-            </h3>
-            <div class="text-sm opacity-70" v-html="post.content"></div>
-          </div>
-        </div>
+          :post="post"
+          variant="mobile"
+          contentClass="text-sm opacity-70"
+        />
       </div>
     </div>
   </main>
