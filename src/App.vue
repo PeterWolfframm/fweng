@@ -2,12 +2,21 @@
 import { computed } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import ThemeSwitcher from './components/ThemeSwitcher.vue'
+import { useAuthStore } from '@/stores/auth'
 
+const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
 const isHome = computed(() => route.path === '/')
 const isArticles = computed(() => route.path.startsWith('/posts'))
+
+const hanldeLogout = () => {
+  auth.logout()
+  router.push('/')
+}
+
+const currentUser = computed(() => auth.currentUser)
 
 const navigationLabel = computed(() => {
   if (isHome.value) return 'posts'
@@ -51,24 +60,22 @@ const handleNavigation = () => {
 
           <router-link to="/profile" class="btn btn-ghost text-base font-medium">profile</router-link>
           <router-link to="/groups" class="btn btn-ghost text-base font-medium">groups</router-link>
-          <router-link to="/users" class="btn btn-ghost text-base font-medium">users</router-link>
+          <router-link to="/users" class="btn btn-ghost text-base font-medium" v-if="auth.isLoggedIn">users</router-link>
           <router-link to="/imprint" class="btn btn-ghost text-base font-medium">imprint</router-link>
           <router-link to="/help" class="btn btn-ghost text-base font-medium">help</router-link>
-          <router-link to="/login" class="btn btn-ghost text-base font-medium hover:opacity-70">
+          <router-link to="/login" class="btn btn-ghost text-base font-medium hover:opacity-70" v-if="!auth.isLoggedIn">
             Login
           </router-link>
 
-          <router-link to="/register" class="btn btn-primary text-base font-medium">
+          <router-link to="/register" class="btn btn-primary text-base font-medium" v-if="!auth.isLoggedIn">
             Register
           </router-link>
 
         </div>
-
-        <div class="flex-none lg:hidden flex items-center gap-2">
-          <router-link to="/login" class="btn btn-ghost btn-sm">Login</router-link>
-          <router-link to="/register" class="btn btn-primary btn-sm">Registrieren</router-link>
-          <ThemeSwitcher />
-        </div>
+        
+        <button v-if="auth.isLoggedIn" @click="hanldeLogout" class="btn btn-ghost text-base font-medium hover:opacity-70">Logout</button>
+        <ThemeSwitcher />
+        <button v-if="auth.isLoggedIn"><p class="text-lg text-blue-400 p-4">{{currentUser.username}}</p></button>
       </div>
     </div>
   </header>

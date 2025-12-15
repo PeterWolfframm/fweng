@@ -80,7 +80,10 @@
         <p v-if="errors.repeatPassword" class="text-error text-sm mt-1">{{ errors.repeatPassword }}</p>
       </div>
 
-
+      <!--Admin-->
+      <div class="mb-4">
+        <input v-model="adminCode" type="password" placeholder="Admin Code" class="input input-bordered w-full max-w-xs"/>
+      </div>
 
       <!-- Registrieren Button -->
       <div class="mb-4">
@@ -113,6 +116,7 @@ const email = ref("");
 const password = ref("");
 
 // neue Felder
+const adminCode = ref("");
 const salutation = ref("");
 const salutationOther = ref("");
 const country = ref("");
@@ -162,6 +166,9 @@ async function register() {
 
     await schema.validate(formData, { abortEarly: false });
 
+    const ADMIN_SECRET = "SECRET123"
+    const role = adminCode.value === ADMIN_SECRET ? "ADMIN" : "USER"
+
     auth.register({
       salutation: salutation.value,
       salutationOther: salutationOther.value,
@@ -169,9 +176,10 @@ async function register() {
       email: email.value,
       country: country.value,
       password: password.value,
+      role,
     });
 
-    router.push("/users");
+    router.push("/");
   } catch (err) {
     if (err?.inner?.length) {
       const mapped = {};

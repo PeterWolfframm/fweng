@@ -55,8 +55,8 @@ export const useAuthStore = defineStore("auth", () => {
       username: payload.username.trim(),
       passwordHash: hash(payload.password),
       country: payload.country,
-      avatarDataUrl: "",
-      role: "USER",
+      avatarDataUrl: "", // später Profile Picture
+      role: payload.role ?? "USER",
     };
 
     users.value.push(newUser);
