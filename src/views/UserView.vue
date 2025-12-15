@@ -96,10 +96,10 @@ const visibleUsers = computed(() => {
     <div class="lg:hidden p-6">
       <div v-if="currentUser" class="group-content">
         <button
-          @click="router.push('/groups')"
+          @click="router.push('/users')"
           class="mb-6 text-emerald-500 hover:opacity-70 flex items-center gap-2"
         >
-          ← Back to articles
+          ← Back to users
         </button>
         <h1 class="text-4xl font-bold mb-6">{{ currentUser.username }}</h1>
         <div class="text-lg leading-relaxed opacity-80" v-html="currentUser.email"></div>

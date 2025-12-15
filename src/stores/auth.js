@@ -8,7 +8,6 @@ import {
   clearSession,
 } from "@/utils/storage";
 
-// Frontend-only "hash" (nur damit nicht Klartext gespeichert wird)
 function hash(s) {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (h << 5) - h + s.charCodeAt(i);
@@ -20,11 +19,9 @@ function uid() {
 }
 
 export const useAuthStore = defineStore("auth", () => {
-  // State
   const users = ref(loadUsers());
-  const session = ref(loadSession()); // { userId, role } oder null
+  const session = ref(loadSession());
 
-  // Getters
   const isLoggedIn = computed(() => !!session.value?.userId);
   const role = computed(() => session.value?.role || "VISITOR");
 
@@ -33,14 +30,11 @@ export const useAuthStore = defineStore("auth", () => {
     return users.value.find((u) => u.id === session.value.userId) || null;
   });
 
-  // Helper: sync to localStorage
   function persistUsers() {
     saveUsers(users.value);
   }
 
-  // Actions
   function register(payload) {
-    // Reload users (falls andere Tabs / Refresh)
     users.value = loadUsers();
 
     const emailExists = users.value.some(
@@ -55,7 +49,7 @@ export const useAuthStore = defineStore("auth", () => {
 
     const newUser = {
       id: uid(),
-      salutation: payload.salutation, // male/female/other
+      salutation: payload.salutation,
       salutationOther: payload.salutation === "other" ? (payload.salutationOther || "") : "",
       email: payload.email.trim(),
       username: payload.username.trim(),
@@ -68,7 +62,6 @@ export const useAuthStore = defineStore("auth", () => {
     users.value.push(newUser);
     persistUsers();
 
-    // Optional: direkt einloggen nach Registrierung
     session.value = { userId: newUser.id, role: newUser.role };
     saveSession(session.value);
   }
@@ -103,7 +96,6 @@ export const useAuthStore = defineStore("auth", () => {
     const idx = users.value.findIndex((u) => u.id === session.value.userId);
     if (idx === -1) throw new Error("User not found.");
 
-    // Uniqueness checks (nur wenn geändert)
     if (updates.email && updates.email !== users.value[idx].email) {
       const exists = users.value.some(
         (u) =>
@@ -139,16 +131,13 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   return {
-    // state
     users,
     session,
 
-    // getters
     isLoggedIn,
     role,
     currentUser,
 
-    // actions
     register,
     login,
     logout,
