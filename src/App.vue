@@ -49,6 +49,7 @@ const handleNavigation = () => {
             {{ navigationLabel }}
           </button>
 
+          <router-link to="/profile" class="btn btn-ghost text-base font-medium">profile</router-link>
           <router-link to="/groups" class="btn btn-ghost text-base font-medium">groups</router-link>
           <router-link to="/users" class="btn btn-ghost text-base font-medium">users</router-link>
           <router-link to="/imprint" class="btn btn-ghost text-base font-medium">imprint</router-link>

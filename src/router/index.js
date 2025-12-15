@@ -59,6 +59,16 @@ const router = createRouter({
       name: 'imprint',
       component: ()  => import('../views/ImprintView.vue'),
     },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('../views/ProfileView.vue'),
+    },
+    {
+      path: '/profile/:section',
+      name: 'profile-section',
+      component: () => import('../views/ProfileView.vue'),
+    },
   ],
 })
 
