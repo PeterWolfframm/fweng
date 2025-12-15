@@ -30,15 +30,18 @@ const navigateToGroup = () => {
 </script>
 
 <template>
-  <div @click="navigateToGroup">
-    <CardFoundationComponent :is-active="isActive" :variant="variant" :content-class="contentClass">
-      <template #emoji>
-        {{ group.icon }}
-      </template>
-      <h3 class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600">
-        {{ group.name }}
-      </h3>
-      <div :class="contentClass" class="text-sm opacity-70" v-html="group.description"></div>
-    </CardFoundationComponent>
-  </div>
+  <CardFoundationComponent
+    :is-active="isActive"
+    :variant="variant"
+    :content-class="contentClass"
+    @click="navigateToGroup"
+  >
+    <template #emoji>
+      {{ group.icon }}
+    </template>
+    <h3 class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600">
+      {{ group.name }}
+    </h3>
+    <div :class="contentClass" class="text-sm opacity-70" v-html="group.description"></div>
+  </CardFoundationComponent>
 </template>

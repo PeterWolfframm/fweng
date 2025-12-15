@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import TwoColumnLayout from '../components/TwoColumnLayout.vue'
 import CardFoundationComponent from '../components/CardFoundationComponent.vue'
-import SingleEmojiCard from '../components/SingleEmojiCard.vue'
 import DetailHeader from '../components/DetailHeader.vue'
 
 const activeCard = ref('info')
@@ -12,7 +11,8 @@ const profileCards = [
     id: 'info',
     emoji: '👤📊📊',
     title: 'Profile Information',
-    description: 'Your personal details and account settings',
+    description:
+      'Your personal details and account settings asdofkjasdfj asdlfkjasdlkf asdlfkjasdlkfj asdlfkjasldkfja asdlkfjalskdjf',
   },
   {
     id: 'activity',
@@ -27,8 +27,6 @@ const profileCards = [
     description: 'Customize your experience and notifications',
   },
 ]
-
-const emojiCards = ['🎉', '🚀', '💡', '🎨', '⭐', '🔥']
 </script>
 
 <template>
@@ -44,7 +42,7 @@ const emojiCards = ['🎉', '🚀', '💡', '🎨', '⭐', '🔥']
         <template #emoji>
           {{ card.emoji }}
         </template>
-        <h3 class="text-xl font-bold mb-2 group-hover:text-emerald-500 transition-colors">
+        <h3 class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600">
           {{ card.title }}
         </h3>
         <p class="text-sm opacity-70">{{ card.description }}</p>
@@ -55,12 +53,6 @@ const emojiCards = ['🎉', '🚀', '💡', '🎨', '⭐', '🔥']
       <DetailHeader
         title="Your Profile"
         description="Manage your account settings, view your activity, and customize your experience on the platform."
-        variant="main"
-      />
-      <SingleEmojiCard
-        v-for="(emoji, index) in emojiCards"
-        :key="index"
-        :emoji="emoji"
         variant="main"
       />
     </template>
@@ -82,15 +74,11 @@ const emojiCards = ['🎉', '🚀', '💡', '🎨', '⭐', '🔥']
           <template #emoji>
             {{ card.emoji }}
           </template>
-          <h3 class="text-xl font-bold mb-2">{{ card.title }}</h3>
+          <h3 class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600">
+            {{ card.title }}
+          </h3>
           <p class="text-sm opacity-70">{{ card.description }}</p>
         </CardFoundationComponent>
-        <SingleEmojiCard
-          v-for="(emoji, index) in emojiCards"
-          :key="'emoji-' + index"
-          :emoji="emoji"
-          variant="mobile"
-        />
       </div>
     </template>
   </TwoColumnLayout>
