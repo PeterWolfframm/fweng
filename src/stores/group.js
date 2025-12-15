@@ -9,24 +9,22 @@ export const useGroupStore = defineStore('group', () => {
     ])
 
 
-    const currentUser = ref(null)
-
-    if(!currentUser.value){
-        currentUser.value = {
-            username: 'testUser',
-            role: 'USER',
-        }
-    }
+    const currentUser = ref({ username: 'testUser', role: 'USER' })
 
     function createGroup(name, description){
+        if (!currentUser.value) {
+      throw new Error("You must be logged in to create a group.");
+    }
         const newGroup = {
             id: Date.now().toString(),
             name, 
+            icon: '🔗',
             description,
             members: [currentUser.value.username],
             posts: [],
         }
         groups.value.push(newGroup)
+        console.log("New group created:", newGroup);
     }
 
     //join group
