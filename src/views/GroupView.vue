@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import EmojiContainer from '../components/EmojiContainer.vue'
+import GroupPreviewCard from '../components/GroupPreviewCard.vue'
 import groups from '../groups.json'
 
 const route = useRoute()
@@ -12,10 +12,6 @@ const currentGroup = computed(() => {
   if (!name) return null
   return groups.find((group) => group.name === name)
 })
-
-const navigateToGroup = (name) => {
-  router.push(`/groups/${encodeURIComponent(name)}`)
-}
 </script>
 
 <template>
@@ -23,29 +19,14 @@ const navigateToGroup = (name) => {
     <div v-if="currentGroup" class="hidden lg:flex w-full h-[calc(100vh-5rem)]">
       <aside class="w-1/3 sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto">
         <div class="w-full p-8">
-          <div
+          <GroupPreviewCard
             v-for="group in groups"
             :key="group.id"
-            @click="navigateToGroup(group.name)"
-            class="group mt-8 flex relative p-4 rounded-xl border-2 cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)] lg:mt-0 lg:py-6 lg:px-4 lg:pl-20 before:content-[''] before:border-l before:border-gray-300 dark:before:border-gray-700 before:absolute before:left-0 before:bottom-[calc(50%+25px)] before:h-[calc(50%-25px)] before:hidden before:lg:block after:content-[''] after:border-l after:border-gray-300 dark:after:border-gray-700 after:absolute after:left-0 after:top-[calc(50%+25px)] after:h-[calc(50%-25px)] after:hidden after:lg:block first:before:hidden! last:after:hidden!"
-            :class="
-              currentGroup && currentGroup.name === group.name
-                ? 'bg-emerald-500/10 border-emerald-500'
-                : 'border-transparent'
-            "
-          >
-            <EmojiContainer>
-              {{ group.icon }}
-            </EmojiContainer>
-            <div class="flex-1 ml-4">
-              <h3
-                class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600"
-              >
-                {{ group.name }}
-              </h3>
-              <div class="text-sm opacity-70" v-html="group.content"></div>
-            </div>
-          </div>
+            :group="group"
+            :isActive="currentGroup && currentGroup.name === group.name"
+            variant="sidebar"
+            contentClass="text-sm opacity-70"
+          />
         </div>
       </aside>
 
@@ -61,24 +42,12 @@ const navigateToGroup = (name) => {
 
     <div v-else class="hidden lg:block w-full">
       <div class="p-8 max-w-7xl mx-auto">
-        <div
+        <GroupPreviewCard
           v-for="group in groups"
           :key="group.id"
-          @click="navigateToGroup(group.name)"
-          class="group mt-8 flex relative p-4 rounded-xl border-2 border-transparent cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)] lg:mt-0 lg:py-6 lg:px-4 lg:pl-20 before:content-[''] before:border-l before:border-gray-300 dark:before:border-gray-700 before:absolute before:left-0 before:bottom-[calc(50%+25px)] before:h-[calc(50%-25px)] before:hidden before:lg:block after:content-[''] after:border-l after:border-gray-300 dark:after:border-gray-700 after:absolute after:left-0 after:top-[calc(50%+25px)] after:h-[calc(50%-25px)] after:hidden after:lg:block first:before:hidden! last:after:hidden!"
-        >
-          <EmojiContainer>
-            {{ group.icon }}
-          </EmojiContainer>
-          <div class="flex-1 ml-4">
-            <h3
-              class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600"
-            >
-              {{ group.name }}
-            </h3>
-            <div v-html="group.description"></div>
-          </div>
-        </div>
+          :group="group"
+          variant="main"
+        />
       </div>
     </div>
 
@@ -94,24 +63,13 @@ const navigateToGroup = (name) => {
         <div class="text-lg leading-relaxed opacity-80" v-html="currentGroup.description"></div>
       </div>
       <div v-else>
-        <div
+        <GroupPreviewCard
           v-for="group in groups"
           :key="group.id"
-          @click="navigateToGroup(group.name)"
-          class="group mt-8 flex relative p-4 rounded-xl border-2 border-transparent cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)]"
-        >
-          <EmojiContainer>
-            {{ group.icon }}
-          </EmojiContainer>
-          <div class="flex-1 ml-4">
-            <h3
-              class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600"
-            >
-              {{ group.name }}
-            </h3>
-            <div class="text-sm opacity-70" v-html="group.description"></div>
-          </div>
-        </div>
+          :group="group"
+          variant="mobile"
+          contentClass="text-sm opacity-70"
+        />
       </div>
     </div>
   </main>
