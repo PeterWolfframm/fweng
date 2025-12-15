@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TwoColumnLayout from '../components/TwoColumnLayout.vue'
 import PostPreviewCard from '../components/PostPreviewCard.vue'
+import DetailHeader from '../components/DetailHeader.vue'
 import posts from '../posts.json'
 
 const route = useRoute()
@@ -29,10 +30,7 @@ const currentPost = computed(() => {
     </template>
 
     <template #main>
-      <div class="post-content max-w-4xl">
-        <h1 class="text-5xl font-bold mb-8">{{ currentPost.title }}</h1>
-        <div class="text-xl leading-relaxed opacity-80" v-html="currentPost.content"></div>
-      </div>
+      <DetailHeader :title="currentPost.title" :description="currentPost.content" variant="main" />
     </template>
 
     <template #mobile>
@@ -43,8 +41,11 @@ const currentPost = computed(() => {
         >
           ← Back to Posts
         </button>
-        <h1 class="text-4xl font-bold mb-6">{{ currentPost.title }}</h1>
-        <div class="text-lg leading-relaxed opacity-80" v-html="currentPost.content"></div>
+        <DetailHeader
+          :title="currentPost.title"
+          :description="currentPost.content"
+          variant="mobile"
+        />
       </div>
     </template>
   </TwoColumnLayout>

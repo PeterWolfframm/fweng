@@ -1,12 +1,11 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import TwoColumnLayout from '../components/TwoColumnLayout.vue'
 import TwoColumnLayoutRightSideWrapper from '../components/TwoColumnLayoutRightSideWrapper.vue'
 import GroupPreviewCard from '../components/GroupPreviewCard.vue'
 import PostPreviewCard from '../components/PostPreviewCard.vue'
-import InputGroupComponent from '../components/InputGroupComponent.vue'
 import groups from '../groups.json'
 import posts from '../posts.json'
 
@@ -176,9 +175,7 @@ const navigateToSection = (sectionId) => {
               </p>
             </div>
 
-            <div class="space-y-6">
-              <InputGroupComponent />
-            </div>
+            <div class="space-y-6"></div>
           </div>
         </div>
       </TwoColumnLayoutRightSideWrapper>
@@ -267,9 +264,7 @@ const navigateToSection = (sectionId) => {
             <p class="text-gray-600 dark:text-gray-400">Manage your account</p>
           </div>
 
-          <div class="space-y-4">
-            <InputGroupComponent />
-          </div>
+          <div class="space-y-4"></div>
         </div>
       </div>
     </template>
