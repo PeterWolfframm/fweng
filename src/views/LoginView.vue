@@ -49,6 +49,7 @@ const router = useRouter()
 const email = ref('')
 const password = ref('')
 
+
 // Login-Funktion
 function login() {
   try{
@@ -56,7 +57,12 @@ function login() {
       emailOrUsername: email.value,
       password: password.value,
     })
+    auth.currentUser.value ={
+      username: email.value,
+      role: 'USER',
+    }
     alert('Login erfolgreich!')
+
     router.push('/')
   } catch (e) {
     console.error(e) //fehler in der konsole anzeigen

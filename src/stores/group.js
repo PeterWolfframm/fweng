@@ -1,20 +1,22 @@
 import { defineStore } from "pinia"
 import {ref} from 'vue'
 
-export const useGroupStore = defineStore('group', () => {
-    const groups = ref([
-        { id: 1, name: 'Tech Enthusiasts', icon: '💻', description: 'A group for people who love technology, gadgets, and innovation.' },
-        { id: 2, name: 'Cooking Lovers', icon: '🍳', description: 'A group for foodies and those who love experimenting in the kitchen.' },
-        { id: 3, name: 'Soccer Lovers', icon: '⚽', description: 'A group for soccer lovers.' }
-    ])
+    function loadGroups(){
+        const groups = localStorage.getItem("groups");
+        return groups ? JSON.parse(groups) : [];
+    }
+
+    export const useGroupStore = defineStore('group', () => {
+        const groups = ref(loadGroups());
 
 
-    const currentUser = ref({ username: 'testUser', role: 'USER' })
+    const currentUser = ref(null);
 
     function createGroup(name, description){
         if (!currentUser.value) {
-      throw new Error("You must be logged in to create a group.");
+      throw new Error('User not logged in!');
     }
+
         const newGroup = {
             id: Date.now().toString(),
             name, 
@@ -23,8 +25,8 @@ export const useGroupStore = defineStore('group', () => {
             members: [currentUser.value.username],
             posts: [],
         }
-        groups.value.push(newGroup)
-        console.log("New group created:", newGroup);
+        groups.value.push(newGroup);
+        localStorage.setItem("groups", JSON.stringify(groups.value));
     }
 
     //join group
