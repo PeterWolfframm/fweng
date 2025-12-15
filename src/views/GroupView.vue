@@ -2,7 +2,9 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import GroupPreviewCard from '../components/GroupPreviewCard.vue'
+import PostPreviewCard from '../components/PostPreviewCard.vue'
 import groups from '../groups.json'
+import posts from '../posts.json'
 
 const route = useRoute()
 const router = useRouter()
@@ -11,6 +13,11 @@ const currentGroup = computed(() => {
   const name = route.params.name
   if (!name) return null
   return groups.find((group) => group.name === name)
+})
+
+const groupPosts = computed(() => {
+  if (!currentGroup.value) return []
+  return posts.filter((post) => post.icon === currentGroup.value.icon)
 })
 </script>
 
@@ -32,10 +39,16 @@ const currentGroup = computed(() => {
 
       <div class="flex-1 w-2/3 overflow-y-auto">
         <div class="p-8">
-          <div class="post-content max-w-4xl">
+          <div class="post-content max-w-4xl mb-8">
             <h1 class="text-5xl font-bold mb-8">{{ currentGroup.name }}</h1>
-            <div class="text-xl leading-relaxed opacity-80" v-html="currentGroup.description"></div>
+            <div class="text-xl leading-relaxed opacity-80 mb-8" v-html="currentGroup.description"></div>
           </div>
+          <PostPreviewCard
+            v-for="post in groupPosts"
+            :key="post.id"
+            :post="post"
+            variant="main"
+          />
         </div>
       </div>
     </div>
@@ -60,7 +73,13 @@ const currentGroup = computed(() => {
           ← Back to groups
         </button>
         <h1 class="text-4xl font-bold mb-6">{{ currentGroup.name }}</h1>
-        <div class="text-lg leading-relaxed opacity-80" v-html="currentGroup.description"></div>
+        <div class="text-lg leading-relaxed opacity-80 mb-8" v-html="currentGroup.description"></div>
+        <PostPreviewCard
+          v-for="post in groupPosts"
+          :key="post.id"
+          :post="post"
+          variant="mobile"
+        />
       </div>
       <div v-else>
         <GroupPreviewCard
