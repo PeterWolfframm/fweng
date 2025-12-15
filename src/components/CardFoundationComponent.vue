@@ -33,7 +33,7 @@ const getBaseClasses = () => {
   }
 
   const emojiPadding = props.showEmoji ? 'lg:pl-20' : ''
-  
+
   return `${base} ${variantClasses[props.variant]} ${emojiPadding}`
 }
 
@@ -52,4 +52,3 @@ const getBorderClasses = () => {
     </div>
   </div>
 </template>
-

@@ -34,7 +34,7 @@ const descriptionClasses = computed(() => {
 
 <template>
   <div :class="containerClasses">
-    <h1 :class="titleClasses">{{ title }} asdafs</h1>
+    <h1 :class="titleClasses">{{ title }}</h1>
     <div :class="descriptionClasses" v-html="description"></div>
   </div>
 </template>
