@@ -20,6 +20,10 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  showEmoji: {
+    type: Boolean,
+    default: true,
+  },
 })
 
 const router = useRouter()
@@ -31,7 +35,7 @@ const navigateToPost = () => {
 
 <template>
   <div @click="navigateToPost">
-    <CardFoundationComponent :is-active="isActive" :variant="variant" :content-class="contentClass">
+    <CardFoundationComponent :is-active="isActive" :variant="variant" :content-class="contentClass" :show-emoji="showEmoji">
       <template #emoji>
         {{ post.icon }}
       </template>

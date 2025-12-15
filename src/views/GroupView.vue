@@ -43,6 +43,7 @@ const groupPosts = computed(() => {
         :key="post.id"
         :post="post"
         variant="main"
+        :show-emoji="false"
       />
     </template>
 
@@ -60,6 +61,7 @@ const groupPosts = computed(() => {
           :key="post.id"
           :post="post"
           variant="mobile"
+          :show-emoji="false"
         />
       </div>
     </template>
