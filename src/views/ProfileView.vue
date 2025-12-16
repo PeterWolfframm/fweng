@@ -18,19 +18,13 @@ const bio = ref('')
 const profileCards = [
   {
     id: 'info',
-    emoji: '👤📊📊',
+    emoji: '👤',
     title: 'Profile Information',
     description: 'Your personal details and account settings',
   },
   {
-    id: 'activity',
-    emoji: '📊📊📊',
-    title: 'Activity & Stats',
-    description: 'Track your engagement and contributions',
-  },
-  {
     id: 'preferences',
-    emoji: '⚙️📊📊',
+    emoji: '⚙️',
     title: 'Preferences',
     description: 'Customize your experience and notifications',
   },
@@ -105,14 +99,6 @@ const profileCards = [
         >
           <template #emoji>✏️</template>
         </InputGroup>
-      </div>
-
-      <div v-else-if="activeCard === 'activity'" class="space-y-0">
-        <DetailHeader
-          title="Activity & Stats"
-          description="Your activity statistics will appear here."
-          variant="main"
-        />
       </div>
 
       <div v-else-if="activeCard === 'preferences'" class="space-y-0">
