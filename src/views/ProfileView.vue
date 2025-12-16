@@ -3,7 +3,6 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import TwoColumnLayout from '../components/TwoColumnLayout.vue'
-import TwoColumnLayoutRightSideWrapper from '../components/TwoColumnLayoutRightSideWrapper.vue'
 import GroupPreviewCard from '../components/GroupPreviewCard.vue'
 import PostPreviewCard from '../components/PostPreviewCard.vue'
 import InputGroupComponent from '../components/InputGroupComponent.vue'
@@ -153,7 +152,7 @@ const handleInputGroupUpdate = (data) => {
     </template>
 
     <template #main>
-      <TwoColumnLayoutRightSideWrapper>
+      <div class="w-full max-w-4xl mx-auto">
         <div class="min-h-[600px]">
           <div v-if="currentSection === 'memberships'" class="space-y-6">
             <div class="mb-8">
@@ -258,7 +257,7 @@ const handleInputGroupUpdate = (data) => {
             </form>
           </div>
         </div>
-      </TwoColumnLayoutRightSideWrapper>
+      </div>
     </template>
 
     <template #mobile>
