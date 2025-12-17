@@ -1,7 +1,6 @@
 <script setup>
 import { computed } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
-import ThemeSwitcher from './components/ThemeSwitcher.vue'
 import StickyFooter from './components/StickyFooter.vue'
 
 import { useAuthStore } from '@/stores/auth'
@@ -76,9 +75,8 @@ const handleNavigation = () => {
             Register
           </router-link>
         </div>
-        
+
         <button v-if="auth.isLoggedIn" @click="hanldeLogout" class="btn btn-ghost text-base font-medium hover:opacity-70">Logout</button>
-        <ThemeSwitcher />
         <button v-if="auth.isLoggedIn"><p class="text-lg text-blue-400 p-4">{{currentUser.username}}</p></button>
       </div>
     </div>
