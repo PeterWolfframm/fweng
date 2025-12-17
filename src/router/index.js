@@ -57,12 +57,22 @@ const router = createRouter({
     {
       path: '/imprint',
       name: 'imprint',
-      component: ()  => import('../views/ImprintView.vue'),
+      component: () => import('../views/ImprintView.vue'),
     },
     {
       path: '/profile',
       name: 'profile',
       component: () => import('../views/ProfileView.vue'),
+    },
+    {
+      path: '/profile/information',
+      name: 'profile-information',
+      component: () => import('../views/ProfileInformationView.vue'),
+    },
+    {
+      path: '/profile/history',
+      name: 'profile-history',
+      component: () => import('../views/ProfileHistoryView.vue'),
     },
     {
       path: '/profile/:section',
