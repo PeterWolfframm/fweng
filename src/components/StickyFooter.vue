@@ -20,6 +20,9 @@ const isActive = (path) => {
 </script>
 
 <template>
+  <!-- Fade to dark gradient overlay -->
+  <div class="fixed bottom-0 left-0 right-0 h-40 pointer-events-none z-30 fade-gradient" />
+
   <footer class="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full lg:w-1/3 px-4 pb-4">
     <CardFoundationComponent :show-emoji="false" variant="mobile">
       <nav class="w-full">
@@ -42,3 +45,25 @@ const isActive = (path) => {
     </CardFoundationComponent>
   </footer>
 </template>
+
+<style scoped>
+.fade-gradient {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(255 255 255 / 0.3) 60%,
+    rgb(255 255 255) 100%
+  );
+}
+</style>
+
+<style>
+.dark .fade-gradient {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(24 24 24 / 0.3) 60%,
+    rgb(24 24 24) 100%
+  ) !important;
+}
+</style>
