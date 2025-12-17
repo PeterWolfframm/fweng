@@ -9,7 +9,7 @@ const isProfileMenuOpen = ref(false)
 const profileButtonRef = ref(null)
 
 const navItems = [
-  { name: 'home', path: '/', emoji: '🏠' },
+  { name: 'yap.', path: '/', emoji: '🗣️' },
   { name: 'posts', path: '/posts', emoji: '📝' },
   { name: 'groups', path: '/groups', emoji: '👥' },
   { name: 'profile', path: '/profile', emoji: '👤' },
@@ -18,6 +18,8 @@ const navItems = [
 const profileSubMenuItems = [
   { name: 'memberships', path: '/profile/memberships', emoji: '🎫' },
   { name: 'settings', path: '/profile/settings', emoji: '⚙️' },
+  { name: 'login', path: '/login', emoji: '🔐' },
+  { name: 'register', path: '/register', emoji: '📝' },
 ]
 
 const isActive = (path) => {
@@ -97,7 +99,9 @@ const navigateToSubMenu = (path) => {
               }"
             >
               <span class="text-2xl mb-1">{{ item.emoji }}</span>
-              <span class="text-xs font-medium capitalize">{{ item.name }}</span>
+              <span class="text-xs font-medium" :class="{ capitalize: item.name !== 'yap.' }">{{
+                item.name
+              }}</span>
             </router-link>
           </template>
         </div>

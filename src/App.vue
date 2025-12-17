@@ -26,7 +26,7 @@ const handleNavigation = () => {
 </script>
 
 <template>
-  <header class="fixed top-0 left-0 right-0 z-50 bg-transparent backdrop-blur-sm">
+  <!-- <header class="fixed top-0 left-0 right-0 z-50 bg-transparent backdrop-blur-sm">
     <div class="px-4 lg:px-8 py-4">
       <div class="flex items-center justify-between">
         <div class="flex-1">
@@ -74,9 +74,9 @@ const handleNavigation = () => {
         </div>
       </div>
     </div>
-  </header>
+  </header> -->
 
-  <div class="pt-20 pb-20">
+  <div class="pb-20">
     <RouterView />
   </div>
 
