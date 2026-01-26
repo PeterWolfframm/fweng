@@ -1,12 +1,47 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import CardFoundationComponent from './CardFoundationComponent.vue'
 
 const route = useRoute()
 const router = useRouter()
 const isProfileMenuOpen = ref(false)
 const profileButtonRef = ref(null)
+const isDark = ref(false)
+
+const toggleTheme = () => {
+  isDark.value = !isDark.value
+  applyTheme(isDark.value)
+}
+
+const applyTheme = (dark, saveToStorage = true) => {
+  const html = document.documentElement
+  if (dark) {
+    html.classList.add('dark')
+  } else {
+    html.classList.remove('dark')
+  }
+  if (saveToStorage) {
+    localStorage.setItem('theme', dark ? 'dark' : 'light')
+  }
+}
+
+onMounted(() => {
+  const savedTheme = localStorage.getItem('theme')
+  if (savedTheme) {
+    isDark.value = savedTheme === 'dark'
+    applyTheme(isDark.value, false)
+  } else {
+    isDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches
+    applyTheme(isDark.value, false)
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      if (!localStorage.getItem('theme')) {
+        isDark.value = e.matches
+        applyTheme(e.matches, false)
+      }
+    })
+  }
+})
 
 const navItems = [
   { name: 'yap.', path: '/', emoji: '🗣️' },
@@ -20,6 +55,7 @@ const profileSubMenuItems = [
   { name: 'settings', path: '/profile/settings', emoji: '⚙️' },
   { name: 'login', path: '/login', emoji: '🔐' },
   { name: 'register', path: '/register', emoji: '📝' },
+  { name: 'theme', action: 'toggleTheme', emoji: 'theme' },
 ]
 
 const isActive = (path) => {
@@ -33,18 +69,24 @@ const toggleProfileMenu = () => {
   isProfileMenuOpen.value = !isProfileMenuOpen.value
 }
 
-const navigateToSubMenu = (path) => {
-  router.push(path)
-  isProfileMenuOpen.value = false
+const navigateToSubMenu = (subItem) => {
+  if (subItem.action === 'toggleTheme') {
+    toggleTheme()
+  } else {
+    router.push(subItem.path)
+    isProfileMenuOpen.value = false
+  }
 }
 </script>
 
 <template>
-  <!-- Fade to dark gradient overlay -->
-  <div class="fixed bottom-0 left-0 right-0 h-40 pointer-events-none z-30 fade-gradient" />
+  <!-- Fade gradient overlay - fades content as it goes behind footer -->
+  <div class="fixed bottom-0 left-0 right-0 h-64 pointer-events-none z-30 fade-gradient" />
 
   <footer class="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full lg:w-1/3 px-4 pb-4">
-    <CardFoundationComponent :show-emoji="false" variant="mobile">
+    <div
+      class="glass-footer w-full p-4 rounded-xl border-2 border-white/20 dark:border-gray-700/50"
+    >
       <nav class="w-full">
         <div class="flex items-center justify-around gap-2">
           <template v-for="item in navItems" :key="item.name">
@@ -57,17 +99,18 @@ const navigateToSubMenu = (path) => {
                     <button
                       v-for="subItem in profileSubMenuItems"
                       :key="subItem.name"
-                      @click="navigateToSubMenu(subItem.path)"
+                      @click="navigateToSubMenu(subItem)"
                       class="submenu-item flex flex-col items-center justify-center rounded-lg transition-all duration-200 hover:bg-emerald-500/10 hover:scale-105"
                       :class="{
-                        'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400': isActive(
-                          subItem.path,
-                        ),
+                        'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400':
+                          subItem.action === 'toggleTheme' ? isDark : isActive(subItem.path),
                         'text-gray-600 dark:text-gray-400 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm':
-                          !isActive(subItem.path),
+                          subItem.action === 'toggleTheme' ? !isDark : !isActive(subItem.path),
                       }"
                     >
-                      <span class="text-2xl">{{ subItem.emoji }}</span>
+                      <span class="text-2xl">{{
+                        subItem.action === 'toggleTheme' ? (isDark ? '☀️' : '🌙') : subItem.emoji
+                      }}</span>
                     </button>
                   </div>
                 </div>
@@ -106,7 +149,7 @@ const navigateToSubMenu = (path) => {
           </template>
         </div>
       </nav>
-    </CardFoundationComponent>
+    </div>
   </footer>
 </template>
 
@@ -115,9 +158,17 @@ const navigateToSubMenu = (path) => {
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(255 255 255 / 0.3) 60%,
-    rgb(255 255 255) 100%
+    rgba(255, 255, 255, 0.3) 30%,
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0.7) 100%
   );
+}
+
+.glass-footer {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 0px 32px rgba(0, 0, 0, 0.1);
 }
 
 .submenu-container {
@@ -171,8 +222,15 @@ const navigateToSubMenu = (path) => {
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(24 24 24 / 0.3) 60%,
-    rgb(24 24 24) 100%
+    rgba(24, 24, 24, 0.3) 30%,
+    rgba(24, 24, 24, 0.5) 60%,
+    rgba(24, 24, 24, 0.7) 100%
   ) !important;
+}
+
+.dark .glass-footer {
+  background: rgba(24, 24, 24, 0.7);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 </style>
