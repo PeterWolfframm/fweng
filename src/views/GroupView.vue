@@ -2,8 +2,10 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TwoColumnLayout from '../components/TwoColumnLayout.vue'
+import FullScreenWidth from '../components/FullScreenWidth.vue'
 import GroupPreviewCard from '../components/GroupPreviewCard.vue'
 import PostPreviewCard from '../components/PostPreviewCard.vue'
+import DetailHeader from '../components/DetailHeader.vue'
 import groups from '../groups.json'
 import posts from '../posts.json'
 
@@ -36,15 +38,13 @@ const groupPosts = computed(() => {
     </template>
 
     <template #main>
-      <div class="post-content max-w-4xl mb-8">
-        <h1 class="text-5xl font-bold mb-8">{{ currentGroup.name }}</h1>
-        <div class="text-xl leading-relaxed opacity-80 mb-8" v-html="currentGroup.description"></div>
-      </div>
+      <DetailHeader :title="currentGroup.name" :description="currentGroup.description" variant="main" />
       <PostPreviewCard
         v-for="post in groupPosts"
         :key="post.id"
         :post="post"
         variant="main"
+        :show-emoji="false"
       />
     </template>
 
@@ -56,31 +56,29 @@ const groupPosts = computed(() => {
         >
           ← Back to groups
         </button>
-        <h1 class="text-4xl font-bold mb-6">{{ currentGroup.name }}</h1>
-        <div class="text-lg leading-relaxed opacity-80 mb-8" v-html="currentGroup.description"></div>
+        <DetailHeader :title="currentGroup.name" :description="currentGroup.description" variant="mobile" />
         <PostPreviewCard
           v-for="post in groupPosts"
           :key="post.id"
           :post="post"
           variant="mobile"
+          :show-emoji="false"
         />
       </div>
     </template>
   </TwoColumnLayout>
 
-  <main v-else class="relative w-full p-0 m-0 max-w-full overflow-x-hidden">
-    <div class="hidden lg:block w-full">
-      <div class="p-8 max-w-7xl mx-auto">
-        <GroupPreviewCard
-          v-for="group in groups"
-          :key="group.id"
-          :group="group"
-          variant="main"
-        />
-      </div>
-    </div>
+  <FullScreenWidth v-else>
+    <template #desktop>
+      <GroupPreviewCard
+        v-for="group in groups"
+        :key="group.id"
+        :group="group"
+        variant="main"
+      />
+    </template>
 
-    <div class="lg:hidden p-6">
+    <template #mobile>
       <GroupPreviewCard
         v-for="group in groups"
         :key="group.id"
@@ -88,6 +86,6 @@ const groupPosts = computed(() => {
         variant="mobile"
         contentClass="text-sm opacity-70"
       />
-    </div>
-  </main>
+    </template>
+  </FullScreenWidth>
 </template>
