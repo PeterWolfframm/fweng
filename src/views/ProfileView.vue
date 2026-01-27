@@ -6,7 +6,6 @@ import DetailHeader from '../components/DetailHeader.vue'
 import InputGroup from '../components/InputGroup.vue'
 import GroupPreviewCard from '../components/GroupPreviewCard.vue'
 import PostPreviewCard from '../components/PostPreviewCard.vue'
-import InputGroupComponent from '../components/InputGroupComponent.vue'
 import groups from '../groups.json'
 import posts from '../posts.json'
 
@@ -142,7 +141,48 @@ const profileCards = [
             </div>
 
             <form @submit.prevent="updateSettings" class="space-y-6">
-              <InputGroupComponent ref="inputGroupRef" @update="handleInputGroupUpdate" />
+              <div class="space-y-0">
+                <InputGroup
+                  label1="First Name"
+                  label2="Last Name"
+                  placeholder1="Enter your first name"
+                  placeholder2="Enter your last name"
+                  v-model:modelValue1="firstName"
+                  v-model:modelValue2="lastName"
+                  variant="main"
+                  :showEmoji="true"
+                >
+                  <template #emoji>👤</template>
+                </InputGroup>
+
+                <InputGroup
+                  label1="Email Address"
+                  label2="Phone Number"
+                  placeholder1="your.email@example.com"
+                  placeholder2="+1 (555) 000-0000"
+                  type1="email"
+                  type2="tel"
+                  v-model:modelValue1="email"
+                  v-model:modelValue2="phone"
+                  variant="main"
+                  :showEmoji="true"
+                >
+                  <template #emoji>📧</template>
+                </InputGroup>
+
+                <InputGroup
+                  label1="Username"
+                  label2="Bio"
+                  placeholder1="@username"
+                  placeholder2="Tell us about yourself"
+                  v-model:modelValue1="username"
+                  v-model:modelValue2="bio"
+                  variant="main"
+                  :showEmoji="true"
+                >
+                  <template #emoji>✏️</template>
+                </InputGroup>
+              </div>
 
               <div class="flex gap-4">
                 <button

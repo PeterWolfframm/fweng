@@ -1,103 +1,163 @@
 <template>
-  <div class="p-8 text-center">
-    <h1 class="text-2xl font-bold mb-8">Registrieren</h1>
+  <main class="relative w-full p-0 m-0 max-w-full overflow-x-hidden">
+    <!-- Desktop Layout -->
+    <div class="hidden lg:block w-full">
+      <div class="p-8 max-w-7xl mx-auto">
+        <h1 class="text-5xl font-bold mb-8 text-emerald-500">Registrieren</h1>
 
-    <form @submit.prevent="register">
-    <p v-if="errors.general" class="text-error text-sm mb-2">{{ errors.general }}</p>
+        <form @submit.prevent="register" class="max-w-md space-y-8">
+          <p v-if="errors.general" class="text-red-600 dark:text-red-400 text-sm p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800">{{ errors.general }}</p>
 
-    <!-- Salutation -->
-    <div class="mb-4">
-      <select v-model="salutation" class="select select-bordered w-full max-w-xs">
-        <option disabled value="">Select salutation</option>
-        <option value="male">male</option>
-        <option value="female">female</option>
-        <option value="other">other</option>
-      </select>
-      <p v-if="errors.salutation" class="text-error text-sm mt-1">{{ errors.salutation }}</p>
+          <!-- Username -->
+          <div>
+            <label class="text-sm font-medium mb-2 text-emerald-500 block">
+              Username
+            </label>
+            <input
+              v-model="name"
+              type="text"
+              placeholder="Enter your username"
+              class="w-full px-4 py-3 rounded-lg border-2 border-transparent bg-gray-100 dark:bg-gray-800 focus:outline-none focus:border-emerald-500 focus:bg-emerald-500/5 transition-all duration-200 hover:border-emerald-500/50"
+            />
+            <p v-if="errors.name" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.name }}</p>
+          </div>
+
+          <!-- Email -->
+          <div>
+            <label class="text-sm font-medium mb-2 text-emerald-500 block">
+              Email
+            </label>
+            <input
+              v-model="email"
+              type="email"
+              placeholder="your.email@example.com"
+              class="w-full px-4 py-3 rounded-lg border-2 border-transparent bg-gray-100 dark:bg-gray-800 focus:outline-none focus:border-emerald-500 focus:bg-emerald-500/5 transition-all duration-200 hover:border-emerald-500/50"
+            />
+            <p v-if="errors.email" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.email }}</p>
+          </div>
+
+          <!-- Password -->
+          <div>
+            <label class="text-sm font-medium mb-2 text-emerald-500 block">
+              Passwort
+            </label>
+            <input
+              v-model="password"
+              type="password"
+              placeholder="Enter your password"
+              class="w-full px-4 py-3 rounded-lg border-2 border-transparent bg-gray-100 dark:bg-gray-800 focus:outline-none focus:border-emerald-500 focus:bg-emerald-500/5 transition-all duration-200 hover:border-emerald-500/50"
+            />
+            <p v-if="errors.password" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.password }}</p>
+          </div>
+
+          <!-- Repeat Password -->
+          <div>
+            <label class="text-sm font-medium mb-2 text-emerald-500 block">
+              Repeat Password
+            </label>
+            <input
+              v-model="repeatPassword"
+              type="password"
+              placeholder="Confirm your password"
+              class="w-full px-4 py-3 rounded-lg border-2 border-transparent bg-gray-100 dark:bg-gray-800 focus:outline-none focus:border-emerald-500 focus:bg-emerald-500/5 transition-all duration-200 hover:border-emerald-500/50"
+            />
+            <p v-if="errors.repeatPassword" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.repeatPassword }}</p>
+          </div>
+
+          <!-- Submit Button -->
+          <button 
+            type="submit"
+            class="w-full px-6 py-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30"
+          >
+            Registrieren
+          </button>
+        </form>
+
+        <p class="mt-6 text-sm">
+          Schon ein Konto?
+          <RouterLink to="/login" class="text-emerald-500 hover:text-emerald-600 font-medium transition-colors">Login</RouterLink>
+        </p>
+      </div>
     </div>
 
-    <div v-if="salutation === 'other'" class="mb-4">
-      <input
-        v-model="salutationOther"
-        type="text"
-        placeholder="Please specify (max 30 chars)"
-        class="input input-bordered w-full max-w-xs"
-      />
-      <p v-if="errors.salutationOther" class="text-error text-sm mt-1">{{ errors.salutationOther }}</p>
-    </div>
+    <!-- Mobile Layout -->
+    <div class="lg:hidden p-6">
+      <h1 class="text-4xl font-bold mb-8 text-emerald-500">Registrieren</h1>
 
-      <!-- Name -->
-      <div class="mb-4">
-        <input
-          v-model="name"
-          type="text"
-          placeholder="Name"
-          class="input input-bordered w-full max-w-xs"
-        />
-      </div>
-      <p v-if="errors.name" class="text-error text-sm mt-1">{{ errors.name }}</p>
+      <form @submit.prevent="register" class="space-y-8">
+        <p v-if="errors.general" class="text-red-600 dark:text-red-400 text-sm p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800">{{ errors.general }}</p>
 
+        <!-- Username -->
+        <div>
+          <label class="text-sm font-medium mb-2 text-emerald-500 block">
+            Username
+          </label>
+          <input
+            v-model="name"
+            type="text"
+            placeholder="Enter your username"
+            class="w-full px-4 py-3 rounded-lg border-2 border-transparent bg-gray-100 dark:bg-gray-800 focus:outline-none focus:border-emerald-500 focus:bg-emerald-500/5 transition-all duration-200 hover:border-emerald-500/50"
+          />
+          <p v-if="errors.name" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.name }}</p>
+        </div>
 
-      <!-- Email -->
-      <div class="mb-4">
-        <input
-          v-model="email"
-          type="email"
-          placeholder="Email"
-          class="input input-bordered w-full max-w-xs"
-        />
-      </div>
-      <p v-if="errors.email" class="text-error text-sm mt-1">{{ errors.email }}</p>
+        <!-- Email -->
+        <div>
+          <label class="text-sm font-medium mb-2 text-emerald-500 block">
+            Email
+          </label>
+          <input
+            v-model="email"
+            type="email"
+            placeholder="your.email@example.com"
+            class="w-full px-4 py-3 rounded-lg border-2 border-transparent bg-gray-100 dark:bg-gray-800 focus:outline-none focus:border-emerald-500 focus:bg-emerald-500/5 transition-all duration-200 hover:border-emerald-500/50"
+          />
+          <p v-if="errors.email" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.email }}</p>
+        </div>
 
-      <!-- Country -->
-      <div class="mb-4">
-        <select v-model="country" class="select select-bordered w-full max-w-xs">
-          <option disabled value="">Select country</option>
-          <option v-for="c in countryOptions" :key="c" :value="c">{{ c }}</option>
-        </select>
-        <p v-if="errors.country" class="text-error text-sm mt-1">{{ errors.country }}</p>
-      </div>
+        <!-- Password -->
+        <div>
+          <label class="text-sm font-medium mb-2 text-emerald-500 block">
+            Passwort
+          </label>
+          <input
+            v-model="password"
+            type="password"
+            placeholder="Enter your password"
+            class="w-full px-4 py-3 rounded-lg border-2 border-transparent bg-gray-100 dark:bg-gray-800 focus:outline-none focus:border-emerald-500 focus:bg-emerald-500/5 transition-all duration-200 hover:border-emerald-500/50"
+          />
+          <p v-if="errors.password" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.password }}</p>
+        </div>
 
-      <!-- Passwort -->
-      <div class="mb-4">
-        <input
-          v-model="password"
-          type="password"
-          placeholder="Passwort"
-          class="input input-bordered w-full max-w-xs"
-        />
-      </div>
-      <p v-if="errors.password" class="text-error text-sm mt-1">{{ errors.password }}</p>
+        <!-- Repeat Password -->
+        <div>
+          <label class="text-sm font-medium mb-2 text-emerald-500 block">
+            Repeat Password
+          </label>
+          <input
+            v-model="repeatPassword"
+            type="password"
+            placeholder="Confirm your password"
+            class="w-full px-4 py-3 rounded-lg border-2 border-transparent bg-gray-100 dark:bg-gray-800 focus:outline-none focus:border-emerald-500 focus:bg-emerald-500/5 transition-all duration-200 hover:border-emerald-500/50"
+          />
+          <p v-if="errors.repeatPassword" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.repeatPassword }}</p>
+        </div>
 
-      <!-- Repeat Password -->
-      <div class="mb-4">
-        <input
-          v-model="repeatPassword"
-          type="password"
-          placeholder="Repeat Password"
-          class="input input-bordered w-full max-w-xs"
-        />
-        <p v-if="errors.repeatPassword" class="text-error text-sm mt-1">{{ errors.repeatPassword }}</p>
-      </div>
-
-      <!--Admin-->
-      <div class="mb-4">
-        <input v-model="adminCode" type="password" placeholder="Admin Code" class="input input-bordered w-full max-w-xs"/>
-      </div>
-
-      <!-- Registrieren Button -->
-      <div class="mb-4">
-        <button class="btn btn-primary w-full max-w-xs">
+        <!-- Submit Button -->
+        <button 
+          type="submit"
+          class="w-full px-6 py-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30"
+        >
           Registrieren
         </button>
-      </div>
-    </form>
+      </form>
 
-    <p class="mt-6 text-sm">
-      Schon ein Konto?
-      <RouterLink to="/login" class="link link-primary">Login</RouterLink>
-    </p>
-  </div>
+      <p class="mt-6 text-sm">
+        Schon ein Konto?
+        <RouterLink to="/login" class="text-emerald-500 hover:text-emerald-600 font-medium transition-colors">Login</RouterLink>
+      </p>
+    </div>
+  </main>
 </template>
 
 <script setup>
@@ -105,36 +165,22 @@ import { ref } from "vue";
 import * as yup from "yup";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { countryOptions } from "@/constants/countries";
+import { apiClient } from "@/config/api";
 
 const router = useRouter();
 const auth = useAuthStore();
 
-// vorhandene Felder
 const name = ref("");
 const email = ref("");
 const password = ref("");
-
-// neue Felder
-const adminCode = ref("");
-const salutation = ref("");
-const salutationOther = ref("");
-const country = ref("");
 const repeatPassword = ref("");
 
 const errors = ref({});
 const submitting = ref(false);
 
 const schema = yup.object({
-  salutation: yup.string().oneOf(["male", "female", "other"]).required("Salutation is required."),
-  salutationOther: yup.string().max(30, "Max 30 characters.").when("salutation", {
-    is: "other",
-    then: (s) => s.required("Please specify your salutation."),
-    otherwise: (s) => s.optional(),
-  }),
   name: yup.string().min(2, "Username is too short.").required("Username is required."),
   email: yup.string().email("Invalid email.").required("Email is required."),
-  country: yup.string().required("Country is required."),
   password: yup
     .string()
     .min(12, "Password must be at least 12 characters.")
@@ -155,39 +201,50 @@ async function register() {
 
   try {
     const formData = {
-      salutation: salutation.value,
-      salutationOther: salutationOther.value,
       name: name.value,
       email: email.value,
-      country: country.value,
       password: password.value,
       repeatPassword: repeatPassword.value,
     };
 
+    // Validate form data
     await schema.validate(formData, { abortEarly: false });
 
-    const ADMIN_SECRET = "SECRET123"
-    const role = adminCode.value === ADMIN_SECRET ? "ADMIN" : "USER"
-
-    auth.register({
-      salutation: salutation.value,
-      salutationOther: salutationOther.value,
+    // Call backend API to register user
+    const response = await apiClient.post('/users', {
       username: name.value,
       email: email.value,
-      country: country.value,
       password: password.value,
-      role,
     });
 
-    router.push("/");
+    // Registration successful - now automatically log them in
+    if (response.data && response.data.id) {
+      // Automatically log in the user after registration
+      await auth.login({
+        emailOrUsername: email.value,
+        password: password.value,
+      });
+      router.push("/");
+    }
   } catch (err) {
+    // Handle validation errors from yup
     if (err?.inner?.length) {
       const mapped = {};
       err.inner.forEach((e) => {
         if (!mapped[e.path]) mapped[e.path] = e.message;
       });
       errors.value = mapped;
+    } 
+    // Handle axios/network errors
+    else if (err.response) {
+      // Backend returned an error response
+      const message = err.response.data?.message || "Registration failed. Please try again.";
+      errors.value = { general: message };
+    } else if (err.request) {
+      // Network error - no response received
+      errors.value = { general: "Cannot connect to server. Please check if the backend is running." };
     } else {
+      // Other errors
       errors.value = { general: err.message || "Registration failed." };
     }
   } finally {

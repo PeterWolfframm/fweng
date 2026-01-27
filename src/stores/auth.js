@@ -66,22 +66,41 @@ export const useAuthStore = defineStore("auth", () => {
     saveSession(session.value);
   }
 
-  function login({ emailOrUsername, password }) {
-    users.value = loadUsers();
+  async function login({ emailOrUsername, password }) {
+    try {
+      // Import axios and API config
+      const { default: axios } = await import('axios');
+      const { API_BASE_URL } = await import('@/config/api');
 
-    const pw = hash(password);
-    const key = emailOrUsername.toLowerCase();
+      // Call backend API for authentication
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+        email: emailOrUsername,
+        password: password,
+      });
 
-    const user = users.value.find(
-      (u) => u.email.toLowerCase() === key || u.username.toLowerCase() === key
-    );
-
-    if (!user || user.passwordHash !== pw) {
-      throw new Error("Invalid credentials.");
+      // Backend returns: { message, userId, username, token }
+      if (response.data && response.data.token) {
+        session.value = {
+          token: response.data.token,
+          userId: response.data.userId,
+          username: response.data.username,
+        };
+        saveSession(session.value);
+      } else {
+        throw new Error("Invalid response from server.");
+      }
+    } catch (error) {
+      // Handle axios errors
+      if (error.response && error.response.status === 401) {
+        throw new Error("Invalid email or password.");
+      } else if (error.request) {
+        throw new Error("Cannot connect to server. Please check if the backend is running.");
+      } else if (error.message) {
+        throw new Error(error.message);
+      } else {
+        throw new Error("Login failed. Please try again.");
+      }
     }
-
-    session.value = { userId: user.id, role: user.role };
-    saveSession(session.value);
   }
 
   function logout() {

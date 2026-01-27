@@ -1,5 +1,5 @@
 const USERS_KEY = "fweng_users";
-const SESSION_KEY = "fweng_session";
+const SESSION_KEY = "session";
 
 export function loadUsers() {
   return JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
