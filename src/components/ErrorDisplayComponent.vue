@@ -13,7 +13,6 @@
       role="alert"
     >
       <div class="flex items-start gap-3">
-        <!-- Error Icon -->
         <svg 
           class="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" 
           fill="currentColor" 
@@ -27,14 +26,12 @@
           />
         </svg>
         
-        <!-- Error Message -->
         <div class="flex-1">
           <p class="text-sm font-medium text-red-600 dark:text-red-400">
             {{ message }}
           </p>
         </div>
         
-        <!-- Close Button (optional) -->
         <button
           v-if="dismissible"
           @click="$emit('dismiss')"

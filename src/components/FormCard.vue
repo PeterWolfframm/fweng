@@ -15,7 +15,6 @@
       </p>
     </div>
 
-    <!-- Success/Error Messages -->
     <SuccessMessage v-if="successMessage" :message="successMessage" class="mb-6" />
     <ErrorDisplayComponent v-if="errorMessage" :message="errorMessage" class="mb-6" />
 

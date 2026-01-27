@@ -91,7 +91,6 @@ const navigateToSubMenu = (subItem) => {
 </script>
 
 <template>
-  <!-- Fade gradient overlay - fades content as it goes behind footer -->
   <div class="fixed bottom-0 left-0 right-0 h-64 pointer-events-none z-30 fade-gradient" />
 
   <footer class="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full lg:w-1/3 px-4 pb-4">
@@ -101,9 +100,7 @@ const navigateToSubMenu = (subItem) => {
       <nav class="w-full">
         <div class="flex items-center justify-around gap-2">
           <template v-for="item in navItems" :key="item.name">
-            <!-- Profile button with submenu toggle -->
             <div v-if="item.name === 'profile'" class="relative">
-              <!-- Profile Submenu -->
               <Transition name="submenu">
                 <div v-if="isProfileMenuOpen" class="submenu-container">
                   <div class="flex flex-col gap-2">
@@ -143,7 +140,6 @@ const navigateToSubMenu = (subItem) => {
               </button>
             </div>
 
-            <!-- Regular navigation items -->
             <router-link
               v-else
               :to="item.path"
@@ -211,7 +207,6 @@ const navigateToSubMenu = (subItem) => {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Submenu animation */
 .submenu-enter-active {
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }

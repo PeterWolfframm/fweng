@@ -6,7 +6,6 @@
       :variant="variant"
     />
     
-    <!-- Group Change UI -->
     <GroupChangeUI
       :post-id="post.id"
       :current-group-id="currentGroupId"
@@ -22,7 +21,6 @@
       @cancel="$emit('cancelGroupChange')"
     />
     
-    <!-- Action Buttons -->
     <div :class="actionButtonsClass" class="mt-4">
       <button
         @click="$emit('edit')"

@@ -1,8 +1,7 @@
 <template>
-  <div class="px-8 py-8 md:px-12 lg:px-16 xl:px-24 2xl:px-32 max-w-5xl mx-auto">
+  <div class="px-6 py-8 md:px-8 lg:px-12 xl:px-16 2xl:px-20">
     <h1 class="text-2xl font-bold mb-6">Hilfe & Unterstützung</h1>
 
-    <!-- FAQ Block 1 -->
     <div class="collapse collapse-arrow bg-base-200 rounded-box mb-3">
       <input type="checkbox" />
       <div class="collapse-title text-md font-medium">
@@ -13,7 +12,6 @@
       </div>
     </div>
 
-    <!-- FAQ Block 2 -->
     <div class="collapse collapse-arrow bg-base-200 rounded-box mb-3">
       <input type="checkbox" />
       <div class="collapse-title text-md font-medium">
@@ -24,7 +22,6 @@
       </div>
     </div>
 
-    <!-- FAQ Block 3 -->
     <div class="collapse collapse-arrow bg-base-200 rounded-box mb-3">
       <input type="checkbox" />
       <div class="collapse-title text-md font-medium">
@@ -35,7 +32,6 @@
       </div>
     </div>
 
-    <!-- FAQ Block 4 -->
     <div class="collapse collapse-arrow bg-base-200 rounded-box mb-3">
       <input type="checkbox" />
       <div class="collapse-title text-md font-medium">

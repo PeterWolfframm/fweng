@@ -8,11 +8,10 @@
       <span v-else class="italic">No group</span>
     </div>
 
-    <!-- Group Change UI -->
     <div v-if="isChanging" class="space-y-3">
       <select
-        :model-value="modelValue"
-        @update:model-value="$emit('update:modelValue', $event)"
+        :value="modelValue"
+        @change="$emit('update:modelValue', $event.target.value)"
         class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all text-sm"
       >
         <option value="">📝 No Group</option>

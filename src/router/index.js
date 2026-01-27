@@ -2,23 +2,15 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import { useAuthStore } from '@/stores/auth'
 
-/**
- * Route guard that requires authentication
- * Redirects to login if not authenticated
- */
 const requireAuth = (to, from, next) => {
   const auth = useAuthStore()
   if (!auth.isLoggedIn) {
-    // Store the intended destination for redirect after login
     next({ name: 'login', query: { redirect: to.fullPath } })
   } else {
     next()
   }
 }
 
-/**
- * Route guard that redirects authenticated users away from guest-only pages
- */
 const guestOnly = (to, from, next) => {
   const auth = useAuthStore()
   if (auth.isLoggedIn) {
@@ -127,11 +119,9 @@ const router = createRouter({
   ],
 })
 
-// Listen for unauthorized events from API and redirect to login
 if (typeof window !== 'undefined') {
   window.addEventListener('auth:unauthorized', () => {
     const currentRoute = router.currentRoute.value
-    // Only redirect if on a protected route
     if (currentRoute.path.startsWith('/profile')) {
       router.push({ name: 'login', query: { redirect: currentRoute.fullPath } })
     }

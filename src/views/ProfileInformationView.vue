@@ -3,7 +3,6 @@ import { ref } from 'vue'
 import DetailHeader from '../components/DetailHeader.vue'
 import InputGroup from '../components/InputGroup.vue'
 
-// Form data for profile information
 const firstName = ref('')
 const lastName = ref('')
 const email = ref('')

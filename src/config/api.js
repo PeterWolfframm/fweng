@@ -1,9 +1,7 @@
 import axios from 'axios'
 
-// Base URL for the backend API
 export const API_BASE_URL = 'http://localhost:8081/api'
 
-// Configured axios instance with default settings
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -41,8 +39,6 @@ export function decodeJwt(token) {
 export function isTokenExpired(token) {
   const payload = decodeJwt(token)
   if (!payload || !payload.exp) return true
-  // exp is in seconds, Date.now() is in milliseconds
-  // Add a 30-second buffer to account for clock skew
   return Date.now() >= payload.exp * 1000 - 30000
 }
 
@@ -61,7 +57,6 @@ export function getStoredToken() {
   }
 }
 
-// Add request interceptor to include JWT token if available and valid
 apiClient.interceptors.request.use(
   (config) => {
     const token = getStoredToken()
@@ -75,21 +70,16 @@ apiClient.interceptors.request.use(
   },
 )
 
-// Add response interceptor to handle authentication errors
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear invalid session
       localStorage.removeItem('session')
-      // Dispatch a custom event that the app can listen to for redirecting
       window.dispatchEvent(new CustomEvent('auth:unauthorized'))
     }
     return Promise.reject(error)
   },
 )
-
-// API Methods
 
 /**
  * Fetch all users (for admin user selection)
@@ -181,8 +171,6 @@ export const fetchGroupById = async (groupId) => {
   return await apiClient.get(`/groups/${groupId}`)
 }
 
-// ========== Authentication Endpoints ==========
-
 /**
  * Refresh JWT token
  * @param {string} email - User email
@@ -192,8 +180,6 @@ export const fetchGroupById = async (groupId) => {
 export const refreshToken = async (email, password) => {
   return await apiClient.post('/auth/token', { email, password })
 }
-
-// ========== User Endpoints ==========
 
 /**
  * Fetch a specific user by ID
@@ -222,8 +208,6 @@ export const updateUser = async (userId, userData) => {
 export const deleteUser = async (userId) => {
   return await apiClient.delete(`/users/${userId}`)
 }
-
-// ========== Post Endpoints ==========
 
 /**
  * Fetch posts from groups that the user is a member of
@@ -261,8 +245,6 @@ export const deletePost = async (postId) => {
   return await apiClient.delete(`/posts/${postId}`)
 }
 
-// ========== Group Endpoints ==========
-
 /**
  * Update a group
  * @param {string|number} groupId - The group ID to update
@@ -284,8 +266,6 @@ export const updateGroup = async (groupId, groupData) => {
 export const deleteGroup = async (groupId) => {
   return await apiClient.delete(`/groups/${groupId}`)
 }
-
-// ========== Group Post Endpoints ==========
 
 /**
  * Fetch all group posts (public endpoint)

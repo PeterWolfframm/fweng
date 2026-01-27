@@ -7,13 +7,11 @@ import { apiClient, updateUser } from '@/config/api'
 const auth = useAuthStore()
 const router = useRouter()
 
-// Form data for profile information
 const email = ref('')
 const username = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 
-// UI state
 const errorMessage = ref('')
 const successMessage = ref('')
 const isLoading = ref(false)
@@ -26,7 +24,6 @@ const passwordValidation = ref({
   special: false
 })
 
-// Load current user data
 onMounted(async () => {
   if (auth.isLoggedIn && auth.currentUser) {
     try {
@@ -46,7 +43,6 @@ onMounted(async () => {
   }
 })
 
-// Validate password in real-time
 const validatePassword = (pwd) => {
   passwordValidation.value = {
     length: pwd.length >= 8 && pwd.length <= 15,
@@ -57,7 +53,6 @@ const validatePassword = (pwd) => {
   }
 }
 
-// Watch password changes for validation
 const onPasswordInput = (event) => {
   password.value = event.target.value
   if (password.value) {
@@ -73,18 +68,15 @@ const onPasswordInput = (event) => {
   }
 }
 
-// Check if password is valid
 const isPasswordValid = () => {
   if (!password.value) return true // Password is optional
   return Object.values(passwordValidation.value).every(v => v)
 }
 
-// Handle profile update
 const updateProfile = async () => {
   errorMessage.value = ''
   successMessage.value = ''
   
-  // Validation
   if (!username.value.trim() && !email.value.trim() && !password.value.trim()) {
     errorMessage.value = 'Please enter at least one field to update'
     return
@@ -95,7 +87,6 @@ const updateProfile = async () => {
     return
   }
   
-  // Password validation
   if (password.value.trim()) {
     if (!isPasswordValid()) {
       errorMessage.value = 'Password does not meet all requirements'
@@ -111,7 +102,6 @@ const updateProfile = async () => {
   isLoading.value = true
 
   try {
-    // Build update data - only include fields that have values
     const updateData = {}
     if (username.value.trim()) updateData.username = username.value.trim()
     if (email.value.trim()) updateData.email = email.value.trim()
@@ -121,12 +111,10 @@ const updateProfile = async () => {
     
     successMessage.value = 'Profile updated successfully!'
     
-    // Update auth store with new username if it was changed
     if (response.data && response.data.username) {
       await auth.fetchCurrentUser()
     }
     
-    // Clear password fields for security
     password.value = ''
     confirmPassword.value = ''
     passwordValidation.value = {
@@ -141,7 +129,6 @@ const updateProfile = async () => {
       successMessage.value = ''
     }, 3000)
   } catch (error) {
-    // Extract error message from API response
     if (error.response?.data?.message) {
       errorMessage.value = error.response.data.message
     } else if (error.response?.status === 401) {
@@ -158,7 +145,6 @@ const updateProfile = async () => {
   }
 }
 
-// Handle logout
 const handleLogout = () => {
   auth.logout()
   router.push('/')
@@ -167,10 +153,8 @@ const handleLogout = () => {
 
 <template>
   <main class="relative w-full p-0 m-0 max-w-full overflow-x-hidden">
-    <!-- Desktop Layout -->
     <div class="hidden lg:block w-full min-h-screen">
-      <div class="px-8 py-8 md:px-12 lg:px-16 xl:px-24 2xl:px-32">
-        <!-- Page Header -->
+      <div class="px-6 py-8 md:px-8 lg:px-12 xl:px-16 2xl:px-20">
         <div class="mb-12">
           <h1 class="text-5xl font-bold text-emerald-500 mb-3">Profile Settings</h1>
           <p class="text-lg text-gray-600 dark:text-gray-400">
@@ -179,7 +163,6 @@ const handleLogout = () => {
         </div>
 
         <div class="space-y-6">
-          <!-- Profile Information Card -->
           <div
             class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-8 shadow-lg hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300"
           >
@@ -193,7 +176,6 @@ const handleLogout = () => {
               </p>
             </div>
 
-            <!-- Success/Error Messages -->
             <div v-if="successMessage" class="mb-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-start gap-3">
               <span class="text-xl">✓</span>
               <span>{{ successMessage }}</span>
@@ -205,7 +187,6 @@ const handleLogout = () => {
             </div>
 
             <form @submit.prevent="updateProfile" class="space-y-6">
-              <!-- Username -->
               <div>
                 <label class="block text-sm font-medium mb-2 text-emerald-500">
                   Username
@@ -218,7 +199,6 @@ const handleLogout = () => {
                 />
               </div>
 
-              <!-- Email Address -->
               <div>
                 <label class="block text-sm font-medium mb-2 text-emerald-500">
                   Email Address
@@ -231,7 +211,6 @@ const handleLogout = () => {
                 />
               </div>
 
-              <!-- Password (optional) -->
               <div>
                 <label class="block text-sm font-medium mb-2 text-emerald-500">
                   New Password (optional)
@@ -244,7 +223,6 @@ const handleLogout = () => {
                   class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
                 />
                 
-                <!-- Password validation indicators -->
                 <div v-if="password" class="mt-3 space-y-2">
                   <div class="flex items-center gap-2 text-xs">
                     <span :class="passwordValidation.length ? 'text-emerald-500' : 'text-gray-400'">
@@ -293,7 +271,6 @@ const handleLogout = () => {
                 </p>
               </div>
 
-              <!-- Confirm Password (shown only when password is entered) -->
               <div v-if="password">
                 <label class="block text-sm font-medium mb-2 text-emerald-500">
                   Confirm New Password
@@ -312,7 +289,6 @@ const handleLogout = () => {
                 </p>
               </div>
 
-              <!-- Action Buttons -->
               <div class="flex gap-4 pt-4">
                 <button
                   type="submit"
@@ -332,7 +308,6 @@ const handleLogout = () => {
             </form>
           </div>
 
-          <!-- Account & Security Card -->
           <div
             class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-8 shadow-lg hover:shadow-xl hover:shadow-red-500/10 transition-all duration-300"
           >
@@ -346,7 +321,6 @@ const handleLogout = () => {
               </p>
             </div>
 
-            <!-- Logout Button -->
             <div class="flex items-center justify-between p-6 rounded-xl bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
               <div>
                 <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">
@@ -368,9 +342,7 @@ const handleLogout = () => {
       </div>
     </div>
 
-    <!-- Mobile Layout -->
     <div class="lg:hidden p-6 pb-24">
-      <!-- Page Header -->
       <div class="mb-8">
         <h1 class="text-4xl font-bold text-emerald-500 mb-2">Profile Settings</h1>
         <p class="text-base text-gray-600 dark:text-gray-400">
@@ -379,7 +351,6 @@ const handleLogout = () => {
       </div>
 
       <div class="space-y-6">
-        <!-- Profile Information Card -->
         <div
           class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg"
         >
@@ -390,7 +361,6 @@ const handleLogout = () => {
             </h2>
           </div>
 
-          <!-- Success/Error Messages -->
           <div v-if="successMessage" class="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-start gap-2 text-sm">
             <span>✓</span>
             <span>{{ successMessage }}</span>
@@ -402,7 +372,6 @@ const handleLogout = () => {
           </div>
 
           <form @submit.prevent="updateProfile" class="space-y-4">
-            <!-- Username -->
             <div>
               <label class="block text-sm font-medium mb-2 text-emerald-500">
                 Username
@@ -415,7 +384,6 @@ const handleLogout = () => {
               />
             </div>
 
-            <!-- Email Address -->
             <div>
               <label class="block text-sm font-medium mb-2 text-emerald-500">
                 Email Address
@@ -428,7 +396,6 @@ const handleLogout = () => {
               />
             </div>
 
-            <!-- Password (optional) -->
             <div>
               <label class="block text-sm font-medium mb-2 text-emerald-500">
                 New Password (optional)
@@ -441,7 +408,6 @@ const handleLogout = () => {
                 class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
               />
               
-              <!-- Password validation indicators -->
               <div v-if="password" class="mt-3 space-y-1.5">
                 <div class="flex items-center gap-2 text-xs">
                   <span :class="passwordValidation.length ? 'text-emerald-500' : 'text-gray-400'">
@@ -490,7 +456,6 @@ const handleLogout = () => {
               </p>
             </div>
 
-            <!-- Confirm Password (shown only when password is entered) -->
             <div v-if="password">
               <label class="block text-sm font-medium mb-2 text-emerald-500">
                 Confirm New Password
@@ -509,7 +474,6 @@ const handleLogout = () => {
               </p>
             </div>
 
-            <!-- Action Buttons -->
             <div class="flex flex-col gap-3 pt-2">
               <button
                 type="submit"
@@ -529,7 +493,6 @@ const handleLogout = () => {
           </form>
         </div>
 
-        <!-- Account & Security Card -->
         <div
           class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg"
         >
@@ -540,7 +503,6 @@ const handleLogout = () => {
             </h2>
           </div>
 
-          <!-- Logout Button -->
           <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
             <h3 class="text-base font-semibold text-gray-800 dark:text-gray-200 mb-2">
               Sign Out

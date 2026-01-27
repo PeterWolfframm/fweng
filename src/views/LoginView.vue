@@ -1,12 +1,10 @@
 <template>
   <main class="relative w-full p-0 m-0 max-w-full overflow-x-hidden">
-    <!-- Desktop Layout -->
     <div class="hidden lg:block w-full">
-      <div class="px-8 py-8 md:px-12 lg:px-16 xl:px-24 2xl:px-32">
+      <div class="px-6 py-8 md:px-8 lg:px-12 xl:px-16 2xl:px-20">
         <h1 class="text-5xl font-bold mb-8 text-emerald-500">Login</h1>
 
-        <form @submit.prevent="login" class="max-w-md space-y-8">
-          <!-- Email -->
+        <form @submit.prevent="login" class="max-w-2xl space-y-8">
           <div>
             <label class="text-sm font-medium mb-2 text-emerald-500 block">
               Email
@@ -19,7 +17,6 @@
             />
           </div>
 
-          <!-- Passwort -->
           <div>
             <label class="text-sm font-medium mb-2 text-emerald-500 block">
               Passwort
@@ -32,7 +29,6 @@
             />
           </div>
 
-          <!-- Button -->
           <button 
             type="submit"
             class="w-full px-6 py-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30"
@@ -40,7 +36,6 @@
             Einloggen
           </button>
 
-          <!-- Error Display -->
           <ErrorDisplayComponent :message="errorMessage" />
         </form>
 
@@ -51,12 +46,10 @@
       </div>
     </div>
 
-    <!-- Mobile Layout -->
     <div class="lg:hidden p-6">
       <h1 class="text-4xl font-bold mb-8 text-emerald-500">Login</h1>
 
       <form @submit.prevent="login" class="space-y-8">
-        <!-- Email -->
         <div>
           <label class="text-sm font-medium mb-2 text-emerald-500 block">
             Email
@@ -69,7 +62,6 @@
           />
         </div>
 
-        <!-- Passwort -->
         <div>
           <label class="text-sm font-medium mb-2 text-emerald-500 block">
             Passwort
@@ -82,7 +74,6 @@
           />
         </div>
 
-        <!-- Button -->
         <button 
           type="submit"
           class="w-full px-6 py-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30"
@@ -90,7 +81,6 @@
           Einloggen
         </button>
 
-        <!-- Error Display -->
         <ErrorDisplayComponent :message="errorMessage" />
       </form>
 
@@ -127,7 +117,6 @@ async function login() {
       emailOrUsername: email.value,
       password: password.value,
     })
-    // Redirect to intended destination or default to home
     const redirectTo = route.query.redirect || '/'
     router.push(redirectTo)
   } catch (e) {

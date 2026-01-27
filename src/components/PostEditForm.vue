@@ -2,7 +2,6 @@
   <div class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
     <h3 :class="[titleSizeClass, 'font-bold text-emerald-500 mb-4']">Edit Post</h3>
     <form @submit.prevent="handleSubmit" class="space-y-4">
-      <!-- Title -->
       <div>
         <label class="block text-sm font-medium mb-2 text-emerald-500">
           Title
@@ -15,7 +14,6 @@
         />
       </div>
 
-      <!-- Body -->
       <div>
         <label class="block text-sm font-medium mb-2 text-emerald-500">
           Body
@@ -28,7 +26,6 @@
         ></textarea>
       </div>
 
-      <!-- Visibility -->
       <div>
         <label class="block text-sm font-medium mb-2 text-emerald-500">
           Visibility
@@ -42,7 +39,6 @@
         </select>
       </div>
 
-      <!-- Action Buttons -->
       <div :class="buttonContainerClass" class="pt-2">
         <button
           type="submit"
@@ -99,7 +95,6 @@ const localTitle = ref(props.initialTitle)
 const localBody = ref(props.initialBody)
 const localVisibility = ref(props.initialVisibility)
 
-// Watch for prop changes (in case parent updates)
 watch(() => props.initialTitle, (newVal) => {
   localTitle.value = newVal
 })

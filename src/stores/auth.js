@@ -6,7 +6,6 @@ import { apiClient, decodeJwt, isTokenExpired, API_BASE_URL } from '@/config/api
 export const useAuthStore = defineStore('auth', () => {
   const session = ref(loadSession())
 
-  // Validate stored session on initialization
   if (session.value?.token && isTokenExpired(session.value.token)) {
     session.value = null
     clearSession()
@@ -14,14 +13,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => {
     if (!session.value?.userId || !session.value?.token) return false
-    // Re-check token expiration on each access
     return !isTokenExpired(session.value.token)
   })
 
   const role = computed(() => {
     if (!session.value?.token) return 'VISITOR'
     const payload = decodeJwt(session.value.token)
-    // JWT typically contains role as 'role' or within 'authorities'
     return payload?.role || payload?.authorities?.[0] || session.value?.role || 'ROLE_USER'
   })
 
@@ -36,16 +33,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login({ emailOrUsername, password }) {
     try {
-      // Use axios directly for login (no auth header needed)
       const { default: axios } = await import('axios')
       const response = await axios.post(`${API_BASE_URL}/auth/login`, {
         email: emailOrUsername,
         password: password,
       })
 
-      // Backend returns: { message, userId, username, token }
       if (response.data && response.data.token) {
-        // Decode JWT to extract role
         const payload = decodeJwt(response.data.token)
         
         session.value = {
@@ -59,7 +53,6 @@ export const useAuthStore = defineStore('auth', () => {
         throw new Error('Invalid response from server.')
       }
     } catch (error) {
-      // Handle axios errors
       if (error.response && error.response.status === 401) {
         throw new Error('Invalid email or password.')
       } else if (error.request) {
@@ -73,7 +66,6 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function fetchCurrentUser() {
-    // Don't fetch if token is expired
     if (!session.value?.token || isTokenExpired(session.value.token)) {
       logout()
       return
@@ -82,7 +74,6 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await apiClient.get('/users/me')
 
-      // Update session with user data
       if (response.data && session.value) {
         session.value = {
           ...session.value,
@@ -92,7 +83,6 @@ export const useAuthStore = defineStore('auth', () => {
         saveSession(session.value)
       }
     } catch (error) {
-      // If unauthorized, the response interceptor will handle cleanup
       if (error.response?.status === 401) {
         logout()
       }
@@ -100,10 +90,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  /**
-   * Validate the current session token
-   * @returns {boolean} True if session is valid
-   */
   function validateSession() {
     if (!session.value?.token) return false
     if (isTokenExpired(session.value.token)) {

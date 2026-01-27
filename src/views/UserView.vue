@@ -62,7 +62,7 @@ const visibleUsers = computed(() => {
 
       <div class="flex-1 w-1.5/3 overflow-y-auto">
         <div class="p-8">
-          <div class="post-content max-w-6xl">
+          <div class="post-content">
             <h1 class="text-5xl font-bold mb-8">{{ currentUser.username }}</h1>
             <div class="text-xl leading-relaxed opacity-80" v-html="currentUser.email"></div>
           </div>
@@ -71,7 +71,7 @@ const visibleUsers = computed(() => {
     </div>
 
     <div v-else class="hidden lg:block w-full">
-      <div class="px-8 py-8 md:px-12 lg:px-16 xl:px-24 2xl:px-32">
+      <div class="px-6 py-8 md:px-8 lg:px-12 xl:px-16 2xl:px-20">
         <div
           v-for="user in visibleUsers"
           :key="user.id"

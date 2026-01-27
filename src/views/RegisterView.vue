@@ -1,12 +1,10 @@
 <template>
   <main class="relative w-full p-0 m-0 max-w-full overflow-x-hidden">
-    <!-- Desktop Layout -->
     <div class="hidden lg:block w-full">
-      <div class="px-8 py-8 md:px-12 lg:px-16 xl:px-24 2xl:px-32">
+      <div class="px-6 py-8 md:px-8 lg:px-12 xl:px-16 2xl:px-20">
         <h1 class="text-5xl font-bold mb-8 text-emerald-500">Registrieren</h1>
 
-        <form @submit.prevent="register" class="max-w-md space-y-8">
-          <!-- Username -->
+        <form @submit.prevent="register" class="max-w-2xl space-y-8">
           <div>
             <label class="text-sm font-medium mb-2 text-emerald-500 block">
               Username
@@ -20,7 +18,6 @@
             <p v-if="errors.name" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.name }}</p>
           </div>
 
-          <!-- Email -->
           <div>
             <label class="text-sm font-medium mb-2 text-emerald-500 block">
               Email
@@ -34,7 +31,6 @@
             <p v-if="errors.email" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.email }}</p>
           </div>
 
-          <!-- Password -->
           <div>
             <label class="text-sm font-medium mb-2 text-emerald-500 block">
               Passwort
@@ -48,7 +44,6 @@
             <p v-if="errors.password" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.password }}</p>
           </div>
 
-          <!-- Repeat Password -->
           <div>
             <label class="text-sm font-medium mb-2 text-emerald-500 block">
               Repeat Password
@@ -62,7 +57,6 @@
             <p v-if="errors.repeatPassword" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.repeatPassword }}</p>
           </div>
 
-          <!-- Submit Button -->
           <button 
             type="submit"
             class="w-full px-6 py-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30"
@@ -70,7 +64,6 @@
             Registrieren
           </button>
 
-          <!-- Error Display -->
           <ErrorDisplayComponent :message="errors.general" />
         </form>
 
@@ -81,12 +74,10 @@
       </div>
     </div>
 
-    <!-- Mobile Layout -->
     <div class="lg:hidden p-6">
       <h1 class="text-4xl font-bold mb-8 text-emerald-500">Registrieren</h1>
 
       <form @submit.prevent="register" class="space-y-8">
-        <!-- Username -->
         <div>
           <label class="text-sm font-medium mb-2 text-emerald-500 block">
             Username
@@ -100,7 +91,6 @@
           <p v-if="errors.name" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.name }}</p>
         </div>
 
-        <!-- Email -->
         <div>
           <label class="text-sm font-medium mb-2 text-emerald-500 block">
             Email
@@ -114,7 +104,6 @@
           <p v-if="errors.email" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.email }}</p>
         </div>
 
-        <!-- Password -->
         <div>
           <label class="text-sm font-medium mb-2 text-emerald-500 block">
             Passwort
@@ -128,7 +117,6 @@
           <p v-if="errors.password" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.password }}</p>
         </div>
 
-        <!-- Repeat Password -->
         <div>
           <label class="text-sm font-medium mb-2 text-emerald-500 block">
             Repeat Password
@@ -142,7 +130,6 @@
           <p v-if="errors.repeatPassword" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ errors.repeatPassword }}</p>
         </div>
 
-        <!-- Submit Button -->
         <button 
           type="submit"
           class="w-full px-6 py-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30"
@@ -150,7 +137,6 @@
           Registrieren
         </button>
 
-        <!-- Error Display -->
         <ErrorDisplayComponent :message="errors.general" />
       </form>
 
@@ -210,19 +196,15 @@ async function register() {
       repeatPassword: repeatPassword.value,
     };
 
-    // Validate form data
     await schema.validate(formData, { abortEarly: false });
 
-    // Call backend API to register user
     const response = await apiClient.post('/users', {
       username: name.value,
       email: email.value,
       password: password.value,
     });
 
-    // Registration successful - now automatically log them in
     if (response.data && response.data.id) {
-      // Automatically log in the user after registration
       await auth.login({
         emailOrUsername: email.value,
         password: password.value,
@@ -230,7 +212,6 @@ async function register() {
       router.push("/");
     }
   } catch (err) {
-    // Handle validation errors from yup
     if (err?.inner?.length) {
       const mapped = {};
       err.inner.forEach((e) => {
@@ -238,16 +219,12 @@ async function register() {
       });
       errors.value = mapped;
     } 
-    // Handle axios/network errors
     else if (err.response) {
-      // Backend returned an error response
       const message = err.response.data?.message || "Registration failed. Please try again.";
       errors.value = { general: message };
     } else if (err.request) {
-      // Network error - no response received
       errors.value = { general: "Cannot connect to server. Please check if the backend is running." };
     } else {
-      // Other errors
       errors.value = { general: err.message || "Registration failed." };
     }
   } finally {

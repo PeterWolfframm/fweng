@@ -9,23 +9,18 @@ const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
-// Handle unauthorized events (e.g., expired token during API call)
 const handleUnauthorized = () => {
   if (auth.isLoggedIn) {
     auth.logout()
   }
-  // Only redirect if on a protected route
   if (route.path.startsWith('/profile')) {
     router.push({ name: 'login', query: { redirect: route.fullPath } })
   }
 }
 
-// Validate session and fetch current user on app mount
 onMounted(() => {
-  // Listen for unauthorized events from API
   window.addEventListener('auth:unauthorized', handleUnauthorized)
 
-  // Validate existing session
   if (auth.validateSession() && auth.isLoggedIn) {
     auth.fetchCurrentUser()
   }
@@ -61,53 +56,6 @@ const handleNavigation = () => {
 </script>
 
 <template>
-  <!-- <header class="fixed top-0 left-0 right-0 z-50 bg-transparent backdrop-blur-sm">
-    <div class="px-4 lg:px-8 py-4">
-      <div class="flex items-center justify-between">
-        <div class="flex-1">
-          <router-link to="/">
-            <h1
-              class="text-3xl lg:text-4xl font-bold cursor-pointer hover:opacity-80 transition-opacity"
-              :class="{ 'lg:opacity-0 lg:pointer-events-none': isHome }"
-            >
-              🗣️ yap.
-            </h1>
-          </router-link>
-        </div>
-
-        <div class="hidden lg:flex flex-none gap-4 items-center">
-          <button
-            @click="handleNavigation"
-            class="btn btn-ghost text-base font-medium hover:opacity-70"
-            :aria-label="`Go to ${navigationLabel}`"
-          >
-            {{ navigationLabel }}
-          </button>
-
-          <router-link to="/profile" class="btn btn-ghost text-base font-medium"
-            >profile</router-link
-          >
-          <router-link to="/groups" class="btn btn-ghost text-base font-medium">groups</router-link>
-          <router-link to="/users" class="btn btn-ghost text-base font-medium">users</router-link>
-          <router-link to="/imprint" class="btn btn-ghost text-base font-medium"
-            >imprint</router-link
-          >
-          <router-link to="/help" class="btn btn-ghost text-base font-medium">help</router-link>
-          <router-link to="/login" class="btn btn-ghost text-base font-medium hover:opacity-70" v-if="!auth.isLoggedIn">
-            Login
-          </router-link>
-
-          <router-link to="/register" class="btn btn-primary text-base font-medium" v-if="!auth.isLoggedIn">
-            Register
-          </router-link>
-        </div>
-
-        <button v-if="auth.isLoggedIn" @click="hanldeLogout" class="btn btn-ghost text-base font-medium hover:opacity-70">Logout</button>
-        <button v-if="auth.isLoggedIn"><p class="text-lg text-blue-400 p-4">{{currentUser.username}}</p></button>
-      </div>
-    </div>
-  </header> -->
-
   <div class="pb-20">
     <RouterView />
   </div>

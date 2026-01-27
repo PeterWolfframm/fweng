@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { apiClient, fetchAllUsers, addGroupMember, fetchGroupMemberships, createGroup as createGroupApi, updatePost, deletePost, fetchAllGroups, createGroupPost, deleteGroupPost } from '@/config/api'
+import { apiClient, fetchAllUsers, addGroupMember, fetchGroupMemberships, createGroup as createGroupApi, updatePost, deletePost, fetchAllGroups, createGroupPost, updateGroupPost, deleteGroupPost, updateGroup, deleteGroup } from '@/config/api'
 import ErrorDisplayComponent from '@/components/ErrorDisplayComponent.vue'
 import PostPreviewCard from '@/components/PostPreviewCard.vue'
 import GroupPreviewCard from '@/components/GroupPreviewCard.vue'
@@ -17,68 +17,54 @@ import AddMemberSection from '@/components/AddMemberSection.vue'
 
 const auth = useAuthStore()
 
-// Check if current user is admin
 const isAdmin = computed(() => auth.role === 'ADMIN')
 
-// Form data for create post
 const postTitle = ref('')
 const postBody = ref('')
 const postVisibility = ref('PUBLIC')
 const selectedGroupId = ref('')
 
-// UI state
 const errorMessage = ref('')
 const successMessage = ref('')
 const isLoading = ref(false)
 
-// Available groups for dropdown
 const availableGroups = ref([])
 const isLoadingAvailableGroups = ref(false)
 
-// User posts state
 const userPosts = ref([])
 const isLoadingPosts = ref(false)
 const postsErrorMessage = ref('')
 
-// Form data for create group
 const groupName = ref('')
 const groupEmoji = ref('')
 const groupDescription = ref('')
 
-// UI state for group creation
 const groupErrorMessage = ref('')
 const groupSuccessMessage = ref('')
 const isLoadingGroup = ref(false)
 
-// User groups state
 const userGroups = ref([])
 const isLoadingGroups = ref(false)
 const groupsErrorMessage = ref('')
 
-// All users state (for admin dropdown)
 const allUsers = ref([])
 const isLoadingUsers = ref(false)
 const usersErrorMessage = ref('')
 
-// Selected user per group (for adding members)
 const selectedUserIds = ref({})
 
-// Member management state
 const addingMemberToGroupId = ref(null)
 const memberSuccessMessage = ref('')
 const memberErrorMessage = ref('')
 
-// Group memberships overview (admin only)
 const groupMemberships = ref([])
 const isLoadingMemberships = ref(false)
 const membershipsErrorMessage = ref('')
 
-// User's group memberships state
 const userGroupMemberships = ref([])
 const isLoadingUserMemberships = ref(false)
 const userMembershipsErrorMessage = ref('')
 
-// Post edit/delete state
 const editingPostId = ref(null)
 const editPostTitle = ref('')
 const editPostBody = ref('')
@@ -88,14 +74,23 @@ const isDeletingPostId = ref(null)
 const postActionError = ref('')
 const postActionSuccess = ref('')
 
-// Post group management state
 const changingGroupForPostId = ref(null)
 const newGroupIdForPost = ref('')
 const isChangingPostGroup = ref(false)
 const allGroupPosts = ref([])
 const isLoadingGroupPosts = ref(false)
 
-// Fetch user's posts
+// Group management state
+const editingGroupId = ref(null)
+const editGroupName = ref('')
+const editGroupEmoji = ref('')
+const editGroupDescription = ref('')
+const isUpdatingGroup = ref(false)
+const isDeletingGroupId = ref(null)
+const groupActionError = ref('')
+const groupActionSuccess = ref('')
+const viewingMembersForGroupId = ref(null)
+
 const fetchUserPosts = async () => {
   isLoadingPosts.value = true
   postsErrorMessage.value = ''
@@ -103,13 +98,51 @@ const fetchUserPosts = async () => {
   try {
     const response = await apiClient.get('/posts/my-posts')
     
-    // Map API response to match PostPreviewCard expected format
-    userPosts.value = response.data.map(post => ({
-      id: post.id,
-      title: post.title,
-      content: post.body,  // Map 'body' to 'content'
-      icon: '📝'           // Default icon for user posts
-    }))
+    // Fetch groups and group posts if not already loaded
+    let groupsData = availableGroups.value
+    let groupPostsData = allGroupPosts.value
+    
+    if (groupsData.length === 0) {
+      try {
+        const groupsResponse = await fetchAllGroups()
+        groupsData = groupsResponse.data
+        availableGroups.value = groupsData
+      } catch (err) {
+        console.error('[ProfileOverview] Error fetching groups for emojis:', err)
+      }
+    }
+    
+    if (groupPostsData.length === 0) {
+      try {
+        const groupPostsResponse = await apiClient.get('/groupposts')
+        groupPostsData = groupPostsResponse.data.map(gp => ({
+          ...gp,
+          sharedBy: gp.username,
+          sharedById: gp.userId
+        }))
+        allGroupPosts.value = groupPostsData
+      } catch (err) {
+        console.error('[ProfileOverview] Error fetching group posts for emojis:', err)
+      }
+    }
+    
+    // Create emoji map from groups
+    const groupsEmojiMap = groupsData.reduce((map, group) => {
+      map[group.id] = group.emoji || '👥'
+      return map
+    }, {})
+    
+    userPosts.value = response.data.map(post => {
+      const groupPost = groupPostsData.find(gp => gp.postId === post.id)
+      const groupEmoji = groupPost && groupsEmojiMap[groupPost.groupId] ? groupsEmojiMap[groupPost.groupId] : '💬'
+      
+      return {
+        id: post.id,
+        title: post.title,
+        content: post.body,
+        icon: groupEmoji
+      }
+    })
   } catch (error) {
     if (error.response?.data?.message) {
       postsErrorMessage.value = error.response.data.message
@@ -123,7 +156,6 @@ const fetchUserPosts = async () => {
   }
 }
 
-// Fetch user's groups
 const fetchUserGroups = async () => {
   isLoadingGroups.value = true
   groupsErrorMessage.value = ''
@@ -133,12 +165,12 @@ const fetchUserGroups = async () => {
     const response = await apiClient.get('/groups/my-groups')
     console.log('[ProfileOverview] Received groups:', response.data)
     
-    // Map API response to match GroupPreviewCard expected format
     userGroups.value = response.data.map(group => ({
       id: group.id,
       name: group.name,
-      icon: '👫',  // Default icon since API doesn't provide it
-      description: `Created by ${group.createdByUsername || 'Unknown'}`
+      emoji: group.emoji || '👥',
+      description: group.description || `Created by ${group.createdByUsername || 'Unknown'}`,
+      createdByUsername: group.createdByUsername
     }))
     console.log('[ProfileOverview] Mapped user groups:', userGroups.value)
   } catch (error) {
@@ -155,7 +187,6 @@ const fetchUserGroups = async () => {
   }
 }
 
-// Fetch all users (admin only - for dropdown)
 const fetchUsers = async () => {
   if (!isAdmin.value) return
   
@@ -178,7 +209,6 @@ const fetchUsers = async () => {
   }
 }
 
-// Fetch group memberships overview (admin only)
 const fetchMemberships = async () => {
   if (!isAdmin.value) return
   
@@ -201,7 +231,6 @@ const fetchMemberships = async () => {
   }
 }
 
-// Fetch user's group memberships
 const fetchUserGroupMemberships = async () => {
   isLoadingUserMemberships.value = true
   userMembershipsErrorMessage.value = ''
@@ -209,12 +238,12 @@ const fetchUserGroupMemberships = async () => {
   try {
     const response = await apiClient.get('/groups/my-groups')
     
-    // Map API response to match GroupPreviewCard expected format
     userGroupMemberships.value = response.data.map(group => ({
       id: group.id,
       name: group.name,
-      icon: '👫',
-      description: `Created by ${group.createdByUsername || 'Unknown'}`
+      emoji: group.emoji || '👥',
+      description: group.description || `Created by ${group.createdByUsername || 'Unknown'}`,
+      createdByUsername: group.createdByUsername
     }))
   } catch (error) {
     if (error.response?.data?.message) {
@@ -229,7 +258,6 @@ const fetchUserGroupMemberships = async () => {
   }
 }
 
-// Fetch available groups for post creation dropdown
 const fetchAvailableGroups = async () => {
   isLoadingAvailableGroups.value = true
   
@@ -238,13 +266,11 @@ const fetchAvailableGroups = async () => {
     availableGroups.value = response.data
   } catch (error) {
     console.error('[ProfileOverview] Error fetching available groups:', error)
-    // Silently fail - user can still create posts without groups
   } finally {
     isLoadingAvailableGroups.value = false
   }
 }
 
-// Add member to group
 const handleAddMember = async (groupId) => {
   const userId = selectedUserIds.value[groupId]
   
@@ -262,10 +288,8 @@ const handleAddMember = async (groupId) => {
     
     memberSuccessMessage.value = 'Member added successfully!'
     
-    // Clear selection
     selectedUserIds.value[groupId] = ''
     
-    // Refresh memberships if visible
     if (isAdmin.value) {
       await fetchMemberships()
     }
@@ -288,7 +312,6 @@ const handleAddMember = async (groupId) => {
   }
 }
 
-// Load posts and groups on component mount
 onMounted(() => {
   fetchUserPosts()
   fetchUserGroups()
@@ -296,19 +319,16 @@ onMounted(() => {
   fetchAvailableGroups()
   fetchAllGroupPosts()
   
-  // Fetch users and memberships if admin
   if (isAdmin.value) {
     fetchUsers()
     fetchMemberships()
   }
 })
 
-// Handle post creation
 const createPost = async () => {
   errorMessage.value = ''
   successMessage.value = ''
   
-  // Validation
   if (!postTitle.value.trim()) {
     errorMessage.value = 'Please enter a title'
     return
@@ -332,7 +352,6 @@ const createPost = async () => {
   isLoading.value = true
 
   try {
-    // Create the post
     const response = await apiClient.post('/posts', {
       title: postTitle.value.trim(),
       body: postBody.value.trim(),
@@ -341,12 +360,10 @@ const createPost = async () => {
     
     const createdPostId = response.data.id
     
-    // If a group is selected, add the post to the group
     if (selectedGroupId.value) {
       try {
         await createGroupPost(selectedGroupId.value, { postId: createdPostId })
         
-        // Find the group name for success message
         const selectedGroup = availableGroups.value.find(g => g.id === selectedGroupId.value)
         const groupName = selectedGroup ? selectedGroup.name : 'group'
         
@@ -359,20 +376,17 @@ const createPost = async () => {
       successMessage.value = 'Post created successfully!'
     }
     
-    // Clear form
     postTitle.value = ''
     postBody.value = ''
     postVisibility.value = 'PUBLIC'
     selectedGroupId.value = ''
     
-    // Refresh posts list to show new post
     await fetchUserPosts()
     
     setTimeout(() => {
       successMessage.value = ''
     }, 3000)
   } catch (error) {
-    // Extract error message from API response
     if (error.response?.data?.message) {
       errorMessage.value = error.response.data.message
     } else if (error.response?.status === 401) {
@@ -387,12 +401,10 @@ const createPost = async () => {
   }
 }
 
-// Handle group creation
 const createGroup = async () => {
   groupErrorMessage.value = ''
   groupSuccessMessage.value = ''
   
-  // Validation
   if (!groupName.value.trim()) {
     groupErrorMessage.value = 'Please enter a group name'
     return
@@ -403,13 +415,11 @@ const createGroup = async () => {
     return
   }
   
-  // Validate emoji if provided
   if (groupEmoji.value.trim() && groupEmoji.value.trim().length > 10) {
     groupErrorMessage.value = 'Emoji must be 10 characters or less'
     return
   }
   
-  // Validate description if provided
   if (groupDescription.value.trim() && groupDescription.value.trim().length > 500) {
     groupErrorMessage.value = 'Description must be 500 characters or less'
     return
@@ -427,19 +437,15 @@ const createGroup = async () => {
     
     groupSuccessMessage.value = 'Group created successfully!'
     
-    // Clear form
     groupName.value = ''
     groupEmoji.value = ''
     groupDescription.value = ''
     
-    // Store count before refresh to detect if new group appears
     const groupsCountBefore = userGroups.value.length
     console.log('[ProfileOverview] Groups count before refresh:', groupsCountBefore)
     
-    // Refresh groups list to show new group
     await fetchUserGroups()
     
-    // Check if the new group appeared in the list
     const groupsCountAfter = userGroups.value.length
     console.log('[ProfileOverview] Groups count after refresh:', groupsCountAfter)
     
@@ -455,7 +461,6 @@ const createGroup = async () => {
     }, 3000)
   } catch (error) {
     console.error('[ProfileOverview] Error creating group:', error)
-    // Extract error message from API response
     if (error.response?.data?.message) {
       groupErrorMessage.value = error.response.data.message
     } else if (error.response?.status === 401) {
@@ -470,7 +475,6 @@ const createGroup = async () => {
   }
 }
 
-// Start editing a post
 const startEditPost = (post) => {
   editingPostId.value = post.id
   editPostTitle.value = post.title
@@ -480,7 +484,6 @@ const startEditPost = (post) => {
   postActionSuccess.value = ''
 }
 
-// Cancel editing
 const cancelEditPost = () => {
   editingPostId.value = null
   editPostTitle.value = ''
@@ -489,13 +492,11 @@ const cancelEditPost = () => {
   postActionError.value = ''
 }
 
-// Update post
 const handleUpdatePost = async (data) => {
   const { postId, title, body, visibility } = data
   postActionError.value = ''
   postActionSuccess.value = ''
   
-  // Validation
   if (!title.trim()) {
     postActionError.value = 'Please enter a title'
     return
@@ -527,13 +528,11 @@ const handleUpdatePost = async (data) => {
     
     postActionSuccess.value = 'Post updated successfully!'
     
-    // Clear edit mode
     editingPostId.value = null
     editPostTitle.value = ''
     editPostBody.value = ''
     editPostVisibility.value = 'PUBLIC'
     
-    // Refresh posts list
     await fetchUserPosts()
     
     setTimeout(() => {
@@ -556,7 +555,6 @@ const handleUpdatePost = async (data) => {
   }
 }
 
-// Delete post
 const handleDeletePost = async (postId) => {
   if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
     return
@@ -571,7 +569,6 @@ const handleDeletePost = async (postId) => {
     
     postActionSuccess.value = 'Post deleted successfully!'
     
-    // Refresh posts list
     await fetchUserPosts()
     
     setTimeout(() => {
@@ -594,7 +591,6 @@ const handleDeletePost = async (postId) => {
   }
 }
 
-// Fetch all group posts to determine post-group associations
 const fetchAllGroupPosts = async () => {
   isLoadingGroupPosts.value = true
   
@@ -607,24 +603,20 @@ const fetchAllGroupPosts = async () => {
     }))
   } catch (error) {
     console.error('[ProfileOverview] Error fetching group posts:', error)
-    // Silently fail - group management will just not show current group
   } finally {
     isLoadingGroupPosts.value = false
   }
 }
 
-// Get the group post entry for a specific post
 const getGroupPostForPost = (postId) => {
   return allGroupPosts.value.find(gp => gp.postId === postId)
 }
 
-// Get the current group ID for a post
 const getCurrentGroupForPost = (postId) => {
   const groupPost = getGroupPostForPost(postId)
   return groupPost ? groupPost.groupId : null
 }
 
-// Get the current group name for a post
 const getCurrentGroupNameForPost = (postId) => {
   const groupId = getCurrentGroupForPost(postId)
   if (!groupId) return null
@@ -632,7 +624,6 @@ const getCurrentGroupNameForPost = (postId) => {
   return group ? group.name : 'Unknown Group'
 }
 
-// Start changing group for a post
 const startChangeGroup = (postId) => {
   changingGroupForPostId.value = postId
   newGroupIdForPost.value = getCurrentGroupForPost(postId) || ''
@@ -640,46 +631,71 @@ const startChangeGroup = (postId) => {
   postActionSuccess.value = ''
 }
 
-// Cancel changing group
 const cancelChangeGroup = () => {
   changingGroupForPostId.value = null
   newGroupIdForPost.value = ''
   postActionError.value = ''
 }
 
-// Handle changing the group of a post
 const handleChangePostGroup = async (postId) => {
   postActionError.value = ''
   postActionSuccess.value = ''
   isChangingPostGroup.value = true
 
   try {
-    // Find current group post association
     const currentGroupPost = getGroupPostForPost(postId)
     
-    // If post is currently in a group, delete that association
+    // Case 1: Post is currently in a group
     if (currentGroupPost) {
-      await deleteGroupPost(currentGroupPost.id)
+      // If selecting a new group, UPDATE the group post
+      if (newGroupIdForPost.value) {
+        await updateGroupPost(currentGroupPost.id, {
+          groupId: newGroupIdForPost.value,
+          postId: postId
+        })
+        
+        const selectedGroup = availableGroups.value.find(g => g.id === newGroupIdForPost.value)
+        const groupName = selectedGroup ? selectedGroup.name : 'group'
+        
+        postActionSuccess.value = `Post group updated to ${groupName}!`
+      } else {
+        // If no group selected, DELETE the group post (remove from all groups)
+        await deleteGroupPost(currentGroupPost.id)
+        postActionSuccess.value = 'Post removed from all groups!'
+      }
+    } 
+    // Case 2: Post is not currently in any group
+    else {
+      // If selecting a group, CREATE a new group post
+      if (newGroupIdForPost.value) {
+        await createGroupPost(newGroupIdForPost.value, { postId })
+        
+        const selectedGroup = availableGroups.value.find(g => g.id === newGroupIdForPost.value)
+        const groupName = selectedGroup ? selectedGroup.name : 'group'
+        
+        postActionSuccess.value = `Post added to ${groupName}!`
+      } else {
+        // No-op: post wasn't in a group and still isn't
+        postActionSuccess.value = 'No changes made'
+      }
     }
     
-    // If a new group is selected, create new association
-    if (newGroupIdForPost.value) {
-      await createGroupPost(newGroupIdForPost.value, { postId })
-      
-      const selectedGroup = availableGroups.value.find(g => g.id === newGroupIdForPost.value)
-      const groupName = selectedGroup ? selectedGroup.name : 'group'
-      
-      postActionSuccess.value = `Post group updated to ${groupName}!`
-    } else {
-      postActionSuccess.value = 'Post removed from all groups!'
-    }
-    
-    // Clear change mode
     changingGroupForPostId.value = null
     newGroupIdForPost.value = ''
     
-    // Refresh group posts to update UI
     await fetchAllGroupPosts()
+    
+    // Update the post's emoji after group change
+    const post = userPosts.value.find(p => p.id === postId)
+    if (post) {
+      const groupPost = allGroupPosts.value.find(gp => gp.postId === postId)
+      if (groupPost) {
+        const group = availableGroups.value.find(g => g.id === groupPost.groupId)
+        post.icon = group?.emoji || '👥'
+      } else {
+        post.icon = '💬'
+      }
+    }
     
     setTimeout(() => {
       postActionSuccess.value = ''
@@ -690,7 +706,7 @@ const handleChangePostGroup = async (postId) => {
     } else if (error.response?.status === 401) {
       postActionError.value = 'You must be logged in to change post groups'
     } else if (error.response?.status === 403) {
-      postActionError.value = 'You do not have permission to change post groups'
+      postActionError.value = 'You can only update your own group posts'
     } else if (error.message) {
       postActionError.value = error.message
     } else {
@@ -700,14 +716,149 @@ const handleChangePostGroup = async (postId) => {
     isChangingPostGroup.value = false
   }
 }
+
+// Group management functions
+const isCreator = (group) => {
+  return auth.currentUser?.username === group.createdByUsername
+}
+
+const startEditGroup = (group) => {
+  editingGroupId.value = group.id
+  editGroupName.value = group.name
+  editGroupEmoji.value = group.emoji || ''
+  editGroupDescription.value = group.description && group.description.includes('Created by') 
+    ? '' 
+    : (group.description || '')
+  groupActionError.value = ''
+  groupActionSuccess.value = ''
+}
+
+const cancelEditGroup = () => {
+  editingGroupId.value = null
+  editGroupName.value = ''
+  editGroupEmoji.value = ''
+  editGroupDescription.value = ''
+  groupActionError.value = ''
+}
+
+const handleUpdateGroup = async (groupId) => {
+  groupActionError.value = ''
+  groupActionSuccess.value = ''
+  
+  if (!editGroupName.value.trim()) {
+    groupActionError.value = 'Please enter a group name'
+    return
+  }
+  
+  if (editGroupName.value.trim().length < 5 || editGroupName.value.trim().length > 15) {
+    groupActionError.value = 'Group name must be between 5 and 15 characters'
+    return
+  }
+  
+  if (editGroupEmoji.value.trim() && editGroupEmoji.value.trim().length > 10) {
+    groupActionError.value = 'Emoji must be 10 characters or less'
+    return
+  }
+  
+  if (editGroupDescription.value.trim() && editGroupDescription.value.trim().length > 500) {
+    groupActionError.value = 'Description must be 500 characters or less'
+    return
+  }
+  
+  isUpdatingGroup.value = true
+
+  try {
+    await updateGroup(groupId, {
+      name: editGroupName.value.trim(),
+      emoji: editGroupEmoji.value.trim() || undefined,
+      description: editGroupDescription.value.trim() || undefined
+    })
+    
+    groupActionSuccess.value = 'Group updated successfully!'
+    
+    editingGroupId.value = null
+    editGroupName.value = ''
+    editGroupEmoji.value = ''
+    editGroupDescription.value = ''
+    
+    await fetchUserGroups()
+    await fetchAvailableGroups()
+    
+    setTimeout(() => {
+      groupActionSuccess.value = ''
+    }, 3000)
+  } catch (error) {
+    if (error.response?.data?.message) {
+      groupActionError.value = error.response.data.message
+    } else if (error.response?.status === 401) {
+      groupActionError.value = 'You must be logged in to update groups'
+    } else if (error.response?.status === 403) {
+      groupActionError.value = 'You can only update groups you created'
+    } else if (error.message) {
+      groupActionError.value = error.message
+    } else {
+      groupActionError.value = 'Failed to update group. Please try again.'
+    }
+  } finally {
+    isUpdatingGroup.value = false
+  }
+}
+
+const handleDeleteGroup = async (groupId) => {
+  if (!confirm('Are you sure you want to delete this group? This action cannot be undone.')) {
+    return
+  }
+  
+  groupActionError.value = ''
+  groupActionSuccess.value = ''
+  isDeletingGroupId.value = groupId
+
+  try {
+    await deleteGroup(groupId)
+    
+    groupActionSuccess.value = 'Group deleted successfully!'
+    
+    await fetchUserGroups()
+    await fetchAvailableGroups()
+    
+    setTimeout(() => {
+      groupActionSuccess.value = ''
+    }, 3000)
+  } catch (error) {
+    if (error.response?.data?.message) {
+      groupActionError.value = error.response.data.message
+    } else if (error.response?.status === 401) {
+      groupActionError.value = 'You must be logged in to delete groups'
+    } else if (error.response?.status === 403) {
+      groupActionError.value = 'You can only delete groups you created'
+    } else if (error.message) {
+      groupActionError.value = error.message
+    } else {
+      groupActionError.value = 'Failed to delete group. Please try again.'
+    }
+  } finally {
+    isDeletingGroupId.value = null
+  }
+}
+
+const toggleViewMembers = (groupId) => {
+  if (viewingMembersForGroupId.value === groupId) {
+    viewingMembersForGroupId.value = null
+  } else {
+    viewingMembersForGroupId.value = groupId
+  }
+}
+
+const getMembersForGroup = (groupId) => {
+  if (!isAdmin.value || !groupMemberships.value) return []
+  return groupMemberships.value.filter(m => m.groupId === groupId)
+}
 </script>
 
 <template>
   <main class="relative w-full p-0 m-0 max-w-full overflow-x-hidden">
-    <!-- Desktop Layout -->
     <div class="hidden lg:block w-full min-h-screen">
-      <div class="px-4 py-8 md:px-6 lg:px-8 xl:px-12 max-w-[1800px] mx-auto">
-        <!-- Page Header -->
+      <div class="px-4 py-8 md:px-6 lg:px-8 xl:px-12">
         <div class="mb-12">
           <h1 class="text-5xl font-bold text-emerald-500 mb-3">Profile Overview</h1>
           <p class="text-lg text-gray-600 dark:text-gray-400">
@@ -716,7 +867,6 @@ const handleChangePostGroup = async (postId) => {
         </div>
 
         <div class="space-y-6">
-          <!-- Create Post Card -->
           <FormCard
             title="Create Post"
             icon="✍️"
@@ -725,7 +875,6 @@ const handleChangePostGroup = async (postId) => {
             :error-message="errorMessage"
             @submit="createPost"
           >
-            <!-- Title -->
             <div>
               <label class="block text-sm font-medium mb-2 text-emerald-500">
                 Title
@@ -738,7 +887,6 @@ const handleChangePostGroup = async (postId) => {
               />
             </div>
 
-            <!-- Body -->
             <div>
               <label class="block text-sm font-medium mb-2 text-emerald-500">
                 Body
@@ -751,7 +899,6 @@ const handleChangePostGroup = async (postId) => {
               ></textarea>
             </div>
 
-            <!-- Visibility -->
             <div>
               <label class="block text-sm font-medium mb-2 text-emerald-500">
                 Visibility
@@ -765,7 +912,6 @@ const handleChangePostGroup = async (postId) => {
               </select>
             </div>
 
-            <!-- Group (Optional) -->
             <div>
               <label class="block text-sm font-medium mb-2 text-emerald-500">
                 Group (Optional)
@@ -801,7 +947,6 @@ const handleChangePostGroup = async (postId) => {
             </template>
           </FormCard>
 
-          <!-- Create Group Card -->
           <FormCard
             title="Create Group"
             icon="👫"
@@ -810,7 +955,6 @@ const handleChangePostGroup = async (postId) => {
             :error-message="groupErrorMessage"
             @submit="createGroup"
           >
-            <!-- Group Name -->
             <div>
               <label class="block text-sm font-medium mb-2 text-emerald-500">
                 Group Name
@@ -823,7 +967,6 @@ const handleChangePostGroup = async (postId) => {
               />
             </div>
 
-            <!-- Group Emoji -->
             <div>
               <label class="block text-sm font-medium mb-2 text-emerald-500">
                 Emoji (Optional)
@@ -838,7 +981,6 @@ const handleChangePostGroup = async (postId) => {
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Max 10 characters</p>
             </div>
 
-            <!-- Group Description -->
             <div>
               <label class="block text-sm font-medium mb-2 text-emerald-500">
                 Description (Optional)
@@ -872,17 +1014,13 @@ const handleChangePostGroup = async (postId) => {
             </template>
           </FormCard>
 
-          <!-- My Posts Section -->
           <div class="mt-12">
             <SectionHeader icon="📋" title="My Posts" />
 
-            <!-- Loading State -->
             <LoadingState v-if="isLoadingPosts" message="Loading your posts..." />
 
-            <!-- Error State -->
             <ErrorDisplayComponent v-if="postsErrorMessage" :message="postsErrorMessage" class="mb-6" />
 
-            <!-- Empty State -->
             <EmptyState
               v-if="!isLoadingPosts && !postsErrorMessage && userPosts.length === 0"
               icon="📝"
@@ -890,14 +1028,11 @@ const handleChangePostGroup = async (postId) => {
               description="Create your first post above to get started!"
             />
 
-            <!-- Post Action Messages -->
             <SuccessMessage v-if="postActionSuccess" :message="postActionSuccess" class="mb-6" />
             <ErrorDisplayComponent v-if="postActionError" :message="postActionError" class="mb-6" />
 
-            <!-- Posts List -->
             <div v-if="!isLoadingPosts && userPosts.length > 0" class="space-y-6">
               <div v-for="post in userPosts" :key="post.id">
-                <!-- Edit Mode -->
                 <PostEditForm
                   v-if="editingPostId === post.id"
                   :post-id="post.id"
@@ -910,7 +1045,6 @@ const handleChangePostGroup = async (postId) => {
                   @cancel="cancelEditPost"
                 />
 
-                <!-- View Mode -->
                 <PostActionsCard
                   v-else
                   :post="post"
@@ -934,23 +1068,21 @@ const handleChangePostGroup = async (postId) => {
             </div>
           </div>
 
-          <!-- My Groups Section -->
           <div class="mt-12">
             <SectionHeader icon="👫" title="My Groups" />
 
-            <!-- Loading State -->
             <LoadingState v-if="isLoadingGroups" message="Loading your groups..." />
 
-            <!-- Error State -->
             <ErrorDisplayComponent v-if="groupsErrorMessage" :message="groupsErrorMessage" class="mb-6" />
 
-            <!-- Member Management Messages (Admin only) -->
             <div v-if="isAdmin">
               <SuccessMessage v-if="memberSuccessMessage" :message="memberSuccessMessage" class="mb-6" />
               <ErrorDisplayComponent v-if="memberErrorMessage" :message="memberErrorMessage" class="mb-6" />
             </div>
 
-            <!-- Empty State -->
+            <SuccessMessage v-if="groupActionSuccess" :message="groupActionSuccess" class="mb-6" />
+            <ErrorDisplayComponent v-if="groupActionError" :message="groupActionError" class="mb-6" />
+
             <EmptyState
               v-if="!isLoadingGroups && !groupsErrorMessage && userGroups.length === 0"
               icon="👫"
@@ -958,41 +1090,147 @@ const handleChangePostGroup = async (postId) => {
               description="Create your first group above to get started!"
             />
 
-            <!-- Groups List -->
             <div v-if="!isLoadingGroups && userGroups.length > 0" class="space-y-6">
               <div v-for="group in userGroups" :key="group.id" class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
-                <GroupPreviewCard
-                  :group="group"
-                  variant="main"
-                />
-                
-                <!-- Add Member UI (Admin only) -->
-                <AddMemberSection
-                  v-if="isAdmin"
-                  :group-id="group.id"
-                  :all-users="allUsers"
-                  :is-loading-users="isLoadingUsers"
-                  :is-adding="addingMemberToGroupId === group.id"
-                  :model-value="selectedUserIds[group.id]"
-                  variant="desktop"
-                  @update:model-value="selectedUserIds[group.id] = $event"
-                  @add-member="handleAddMember(group.id)"
-                />
+                <div v-if="editingGroupId === group.id">
+                  <h3 class="text-xl font-semibold mb-4 text-emerald-500">Edit Group</h3>
+                  
+                  <div class="space-y-4">
+                    <div>
+                      <label class="block text-sm font-medium mb-2 text-emerald-500">
+                        Group Name
+                      </label>
+                      <input
+                        v-model="editGroupName"
+                        type="text"
+                        placeholder="Enter group name..."
+                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium mb-2 text-emerald-500">
+                        Emoji (Optional)
+                      </label>
+                      <input
+                        v-model="editGroupEmoji"
+                        type="text"
+                        placeholder="e.g., ✈️ 🌍 🎨"
+                        maxlength="10"
+                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+                      />
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Max 10 characters</p>
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium mb-2 text-emerald-500">
+                        Description (Optional)
+                      </label>
+                      <textarea
+                        v-model="editGroupDescription"
+                        rows="4"
+                        placeholder="Describe your group..."
+                        maxlength="500"
+                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all resize-vertical"
+                      ></textarea>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ editGroupDescription.length }}/500 characters</p>
+                    </div>
+
+                    <div class="flex gap-2">
+                      <button
+                        @click="handleUpdateGroup(group.id)"
+                        :disabled="isUpdatingGroup"
+                        class="flex-1 px-6 py-3 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-50"
+                      >
+                        <span v-if="!isUpdatingGroup">💾 Save Changes</span>
+                        <span v-else>Saving...</span>
+                      </button>
+                      <button
+                        @click="cancelEditGroup"
+                        class="px-6 py-3 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 transition-all font-medium"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-else>
+                  <GroupPreviewCard
+                    :group="group"
+                    variant="main"
+                  />
+                  
+                  <div class="mt-4 pt-4 border-t-2 border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <button
+                        v-if="isCreator(group)"
+                        @click="startEditGroup(group)"
+                        class="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 active:scale-95 transition-all shadow-md"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        v-if="isCreator(group)"
+                        @click="handleDeleteGroup(group.id)"
+                        :disabled="isDeletingGroupId === group.id"
+                        class="px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 active:scale-95 transition-all shadow-md disabled:opacity-50"
+                      >
+                        <span v-if="isDeletingGroupId === group.id">Deleting...</span>
+                        <span v-else>🗑️ Delete</span>
+                      </button>
+                      <button
+                        @click="toggleViewMembers(group.id)"
+                        class="px-4 py-2 rounded-lg bg-gray-500 text-white text-sm font-medium hover:bg-gray-600 active:scale-95 transition-all shadow-md"
+                      >
+                        <span v-if="viewingMembersForGroupId === group.id">👥 Hide Members</span>
+                        <span v-else>👥 View Members</span>
+                      </button>
+                    </div>
+
+                    <div v-if="viewingMembersForGroupId === group.id" class="mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
+                      <h4 class="text-sm font-semibold mb-3 text-emerald-500">Group Members</h4>
+                      <div v-if="isAdmin && getMembersForGroup(group.id).length > 0" class="space-y-2">
+                        <div v-for="member in getMembersForGroup(group.id)" :key="member.userId" 
+                          class="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-lg">
+                          <span class="text-sm font-medium">{{ member.username }}</span>
+                          <span class="text-xs px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400">
+                            {{ member.role || 'MEMBER' }}
+                          </span>
+                        </div>
+                      </div>
+                      <div v-else-if="isAdmin && getMembersForGroup(group.id).length === 0" class="text-sm text-gray-500 dark:text-gray-400">
+                        No members found
+                      </div>
+                      <div v-else-if="!isAdmin" class="text-sm text-gray-500 dark:text-gray-400">
+                        Log in as admin to view members
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <AddMemberSection
+                    v-if="isAdmin"
+                    :group-id="group.id"
+                    :all-users="allUsers"
+                    :is-loading-users="isLoadingUsers"
+                    :is-adding="addingMemberToGroupId === group.id"
+                    :model-value="selectedUserIds[group.id]"
+                    variant="desktop"
+                    @update:model-value="selectedUserIds[group.id] = $event"
+                    @add-member="handleAddMember(group.id)"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- My Memberships Section -->
           <div class="mt-12">
             <SectionHeader icon="👥" title="My Memberships" />
 
-            <!-- Loading State -->
             <LoadingState v-if="isLoadingUserMemberships" message="Loading your memberships..." />
 
-            <!-- Error State -->
             <ErrorDisplayComponent v-if="userMembershipsErrorMessage" :message="userMembershipsErrorMessage" class="mb-6" />
 
-            <!-- Empty State -->
             <EmptyState
               v-if="!isLoadingUserMemberships && !userMembershipsErrorMessage && userGroupMemberships.length === 0"
               icon="👥"
@@ -1000,7 +1238,6 @@ const handleChangePostGroup = async (postId) => {
               description="Join or create a group to get started!"
             />
 
-            <!-- Memberships List -->
             <div v-if="!isLoadingUserMemberships && userGroupMemberships.length > 0" class="space-y-6">
               <div
                 v-for="group in userGroupMemberships"
@@ -1015,17 +1252,13 @@ const handleChangePostGroup = async (postId) => {
             </div>
           </div>
 
-          <!-- Group Memberships Overview (Admin only) -->
           <div v-if="isAdmin" class="mt-12">
             <SectionHeader icon="🛡️" title="Group Memberships Overview" />
 
-            <!-- Loading State -->
             <LoadingState v-if="isLoadingMemberships" message="Loading memberships..." />
 
-            <!-- Error State -->
             <ErrorDisplayComponent v-if="membershipsErrorMessage" :message="membershipsErrorMessage" class="mb-6" />
 
-            <!-- Empty State -->
             <EmptyState
               v-if="!isLoadingMemberships && !membershipsErrorMessage && groupMemberships.length === 0"
               icon="📊"
@@ -1033,7 +1266,6 @@ const handleChangePostGroup = async (postId) => {
               description="Add members to groups to see them here"
             />
 
-            <!-- Memberships Table -->
             <div v-if="!isLoadingMemberships && groupMemberships.length > 0" 
               class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 overflow-hidden shadow-lg">
               <div class="overflow-x-auto">
@@ -1069,9 +1301,7 @@ const handleChangePostGroup = async (postId) => {
       </div>
     </div>
 
-    <!-- Mobile Layout -->
     <div class="lg:hidden p-6 pb-24">
-      <!-- Page Header -->
       <div class="mb-8">
         <h1 class="text-4xl font-bold text-emerald-500 mb-2">Profile Overview</h1>
         <p class="text-base text-gray-600 dark:text-gray-400">
@@ -1080,7 +1310,6 @@ const handleChangePostGroup = async (postId) => {
       </div>
 
       <div class="space-y-6">
-        <!-- Create Post Card -->
         <FormCard
           title="Create Post"
           icon="✍️"
@@ -1092,7 +1321,6 @@ const handleChangePostGroup = async (postId) => {
           variant="mobile"
           @submit="createPost"
         >
-          <!-- Title -->
           <div>
             <label class="block text-sm font-medium mb-2 text-emerald-500">
               Title
@@ -1105,7 +1333,6 @@ const handleChangePostGroup = async (postId) => {
             />
           </div>
 
-          <!-- Body -->
           <div>
             <label class="block text-sm font-medium mb-2 text-emerald-500">
               Body
@@ -1118,7 +1345,6 @@ const handleChangePostGroup = async (postId) => {
             ></textarea>
           </div>
 
-          <!-- Visibility -->
           <div>
             <label class="block text-sm font-medium mb-2 text-emerald-500">
               Visibility
@@ -1132,7 +1358,6 @@ const handleChangePostGroup = async (postId) => {
             </select>
           </div>
 
-          <!-- Group (Optional) -->
           <div>
             <label class="block text-sm font-medium mb-2 text-emerald-500">
               Group (Optional)
@@ -1168,7 +1393,6 @@ const handleChangePostGroup = async (postId) => {
           </template>
         </FormCard>
 
-        <!-- Create Group Card -->
         <FormCard
           title="Create Group"
           icon="👫"
@@ -1180,7 +1404,6 @@ const handleChangePostGroup = async (postId) => {
           variant="mobile"
           @submit="createGroup"
         >
-          <!-- Group Name -->
           <div>
             <label class="block text-sm font-medium mb-2 text-emerald-500">
               Group Name
@@ -1193,7 +1416,6 @@ const handleChangePostGroup = async (postId) => {
             />
           </div>
 
-          <!-- Group Emoji -->
           <div>
             <label class="block text-sm font-medium mb-2 text-emerald-500">
               Emoji (Optional)
@@ -1208,7 +1430,6 @@ const handleChangePostGroup = async (postId) => {
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Max 10 characters</p>
           </div>
 
-          <!-- Group Description -->
           <div>
             <label class="block text-sm font-medium mb-2 text-emerald-500">
               Description (Optional)
@@ -1242,21 +1463,16 @@ const handleChangePostGroup = async (postId) => {
           </template>
         </FormCard>
 
-        <!-- My Posts Section -->
         <div class="mt-12">
           <SectionHeader icon="📋" title="My Posts" icon-size="text-3xl" title-size="text-2xl" />
 
-          <!-- Loading State -->
           <LoadingState v-if="isLoadingPosts" message="Loading your posts..." />
 
-          <!-- Error State -->
           <ErrorDisplayComponent v-if="postsErrorMessage" :message="postsErrorMessage" class="mb-4" />
 
-          <!-- Post Action Messages -->
           <SuccessMessage v-if="postActionSuccess" :message="postActionSuccess" class="mb-4" />
           <ErrorDisplayComponent v-if="postActionError" :message="postActionError" class="mb-4" />
 
-          <!-- Empty State -->
           <EmptyState
             v-if="!isLoadingPosts && !postsErrorMessage && userPosts.length === 0"
             icon="📝"
@@ -1266,10 +1482,8 @@ const handleChangePostGroup = async (postId) => {
             title-size="text-lg"
           />
 
-          <!-- Posts List -->
           <div v-if="!isLoadingPosts && userPosts.length > 0" class="space-y-6">
             <div v-for="post in userPosts" :key="post.id">
-              <!-- Edit Mode -->
               <PostEditForm
                 v-if="editingPostId === post.id"
                 :post-id="post.id"
@@ -1282,7 +1496,6 @@ const handleChangePostGroup = async (postId) => {
                 @cancel="cancelEditPost"
               />
 
-              <!-- View Mode -->
               <PostActionsCard
                 v-else
                 :post="post"
@@ -1307,23 +1520,21 @@ const handleChangePostGroup = async (postId) => {
           </div>
         </div>
 
-        <!-- My Groups Section -->
         <div class="mt-12">
           <SectionHeader icon="👫" title="My Groups" icon-size="text-3xl" title-size="text-2xl" />
 
-          <!-- Loading State -->
           <LoadingState v-if="isLoadingGroups" message="Loading your groups..." />
 
-          <!-- Error State -->
           <ErrorDisplayComponent v-if="groupsErrorMessage" :message="groupsErrorMessage" class="mb-4" />
 
-          <!-- Member Management Messages (Admin only) -->
           <div v-if="isAdmin">
             <SuccessMessage v-if="memberSuccessMessage" :message="memberSuccessMessage" class="mb-4" />
             <ErrorDisplayComponent v-if="memberErrorMessage" :message="memberErrorMessage" class="mb-4" />
           </div>
 
-          <!-- Empty State -->
+          <SuccessMessage v-if="groupActionSuccess" :message="groupActionSuccess" class="mb-4" />
+          <ErrorDisplayComponent v-if="groupActionError" :message="groupActionError" class="mb-4" />
+
           <EmptyState
             v-if="!isLoadingGroups && !groupsErrorMessage && userGroups.length === 0"
             icon="👫"
@@ -1333,41 +1544,147 @@ const handleChangePostGroup = async (postId) => {
             title-size="text-lg"
           />
 
-          <!-- Groups List -->
           <div v-if="!isLoadingGroups && userGroups.length > 0" class="space-y-6">
             <div v-for="group in userGroups" :key="group.id" class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
-              <GroupPreviewCard
-                :group="group"
-                variant="mobile"
-              />
-              
-              <!-- Add Member UI (Admin only) -->
-              <AddMemberSection
-                v-if="isAdmin"
-                :group-id="group.id"
-                :all-users="allUsers"
-                :is-loading-users="isLoadingUsers"
-                :is-adding="addingMemberToGroupId === group.id"
-                :model-value="selectedUserIds[group.id]"
-                variant="mobile"
-                @update:model-value="selectedUserIds[group.id] = $event"
-                @add-member="handleAddMember(group.id)"
-              />
+              <div v-if="editingGroupId === group.id">
+                <h3 class="text-lg font-semibold mb-4 text-emerald-500">Edit Group</h3>
+                
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-sm font-medium mb-2 text-emerald-500">
+                      Group Name
+                    </label>
+                    <input
+                      v-model="editGroupName"
+                      type="text"
+                      placeholder="Enter group name..."
+                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium mb-2 text-emerald-500">
+                      Emoji (Optional)
+                    </label>
+                    <input
+                      v-model="editGroupEmoji"
+                      type="text"
+                      placeholder="e.g., ✈️ 🌍 🎨"
+                      maxlength="10"
+                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+                    />
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Max 10 characters</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium mb-2 text-emerald-500">
+                      Description (Optional)
+                    </label>
+                    <textarea
+                      v-model="editGroupDescription"
+                      rows="4"
+                      placeholder="Describe your group..."
+                      maxlength="500"
+                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all resize-vertical"
+                    ></textarea>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ editGroupDescription.length }}/500 characters</p>
+                  </div>
+
+                  <div class="flex flex-col gap-2">
+                    <button
+                      @click="handleUpdateGroup(group.id)"
+                      :disabled="isUpdatingGroup"
+                      class="w-full px-6 py-3 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-50"
+                    >
+                      <span v-if="!isUpdatingGroup">💾 Save Changes</span>
+                      <span v-else>Saving...</span>
+                    </button>
+                    <button
+                      @click="cancelEditGroup"
+                      class="w-full px-6 py-3 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 transition-all font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else>
+                <GroupPreviewCard
+                  :group="group"
+                  variant="mobile"
+                />
+                
+                <div class="mt-4 pt-4 border-t-2 border-gray-200 dark:border-gray-700">
+                  <div class="flex flex-col gap-2">
+                    <button
+                      v-if="isCreator(group)"
+                      @click="startEditGroup(group)"
+                      class="w-full px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 active:scale-95 transition-all shadow-md"
+                    >
+                      ✏️ Edit Group
+                    </button>
+                    <button
+                      v-if="isCreator(group)"
+                      @click="handleDeleteGroup(group.id)"
+                      :disabled="isDeletingGroupId === group.id"
+                      class="w-full px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 active:scale-95 transition-all shadow-md disabled:opacity-50"
+                    >
+                      <span v-if="isDeletingGroupId === group.id">Deleting...</span>
+                      <span v-else>🗑️ Delete Group</span>
+                    </button>
+                    <button
+                      @click="toggleViewMembers(group.id)"
+                      class="w-full px-4 py-2 rounded-lg bg-gray-500 text-white text-sm font-medium hover:bg-gray-600 active:scale-95 transition-all shadow-md"
+                    >
+                      <span v-if="viewingMembersForGroupId === group.id">👥 Hide Members</span>
+                      <span v-else>👥 View Members</span>
+                    </button>
+                  </div>
+
+                  <div v-if="viewingMembersForGroupId === group.id" class="mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
+                    <h4 class="text-sm font-semibold mb-3 text-emerald-500">Group Members</h4>
+                    <div v-if="isAdmin && getMembersForGroup(group.id).length > 0" class="space-y-2">
+                      <div v-for="member in getMembersForGroup(group.id)" :key="member.userId" 
+                        class="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-lg">
+                        <span class="text-sm font-medium">{{ member.username }}</span>
+                        <span class="text-xs px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400">
+                          {{ member.role || 'MEMBER' }}
+                        </span>
+                      </div>
+                    </div>
+                    <div v-else-if="isAdmin && getMembersForGroup(group.id).length === 0" class="text-sm text-gray-500 dark:text-gray-400">
+                      No members found
+                    </div>
+                    <div v-else-if="!isAdmin" class="text-sm text-gray-500 dark:text-gray-400">
+                      Log in as admin to view members
+                    </div>
+                  </div>
+                </div>
+                
+                <AddMemberSection
+                  v-if="isAdmin"
+                  :group-id="group.id"
+                  :all-users="allUsers"
+                  :is-loading-users="isLoadingUsers"
+                  :is-adding="addingMemberToGroupId === group.id"
+                  :model-value="selectedUserIds[group.id]"
+                  variant="mobile"
+                  @update:model-value="selectedUserIds[group.id] = $event"
+                  @add-member="handleAddMember(group.id)"
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- My Memberships Section -->
         <div class="mt-12">
           <SectionHeader icon="👥" title="My Memberships" icon-size="text-3xl" title-size="text-2xl" />
 
-          <!-- Loading State -->
           <LoadingState v-if="isLoadingUserMemberships" message="Loading your memberships..." />
 
-          <!-- Error State -->
           <ErrorDisplayComponent v-if="userMembershipsErrorMessage" :message="userMembershipsErrorMessage" class="mb-4" />
 
-          <!-- Empty State -->
           <EmptyState
             v-if="!isLoadingUserMemberships && !userMembershipsErrorMessage && userGroupMemberships.length === 0"
             icon="👥"
@@ -1377,7 +1694,6 @@ const handleChangePostGroup = async (postId) => {
             title-size="text-lg"
           />
 
-          <!-- Memberships List -->
           <div v-if="!isLoadingUserMemberships && userGroupMemberships.length > 0" class="space-y-6">
             <div
               v-for="group in userGroupMemberships"
@@ -1392,17 +1708,13 @@ const handleChangePostGroup = async (postId) => {
           </div>
         </div>
 
-        <!-- Group Memberships Overview (Admin only) -->
         <div v-if="isAdmin" class="mt-12">
           <SectionHeader icon="🛡️" title="Group Memberships Overview" icon-size="text-3xl" title-size="text-2xl" />
 
-          <!-- Loading State -->
           <LoadingState v-if="isLoadingMemberships" message="Loading memberships..." />
 
-          <!-- Error State -->
           <ErrorDisplayComponent v-if="membershipsErrorMessage" :message="membershipsErrorMessage" class="mb-4" />
 
-          <!-- Empty State -->
           <EmptyState
             v-if="!isLoadingMemberships && !membershipsErrorMessage && groupMemberships.length === 0"
             icon="📊"
@@ -1412,7 +1724,6 @@ const handleChangePostGroup = async (postId) => {
             title-size="text-lg"
           />
 
-          <!-- Memberships List (Card style for mobile) -->
           <div v-if="!isLoadingMemberships && groupMemberships.length > 0" class="space-y-3">
             <div v-for="membership in groupMemberships" :key="`${membership.userId}-${membership.groupId}`"
               class="bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-4 shadow-md">
