@@ -4,7 +4,7 @@
 
 <template>
   <main class="min-h-200 bg-slate-950 text-slate-50 py-12 px-40">
-    <div class="max-w-5xl mx-auto space-y-8">
+    <div class="max-w-7xl mx-auto space-y-8">
 
       <h1 class="text-4xl font-semibold text-center text-indigo-400">Imprint</h1><br>
 

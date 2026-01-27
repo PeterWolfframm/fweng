@@ -1,5 +1,5 @@
 <template>
-  <div class="p-8 max-w-2xl mx-auto">
+  <div class="px-8 py-8 md:px-12 lg:px-16 xl:px-24 2xl:px-32 max-w-5xl mx-auto">
     <h1 class="text-2xl font-bold mb-6">Hilfe & Unterstützung</h1>
 
     <!-- FAQ Block 1 -->

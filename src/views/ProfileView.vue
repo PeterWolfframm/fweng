@@ -107,7 +107,7 @@ const handleLogout = () => {
   <main class="relative w-full p-0 m-0 max-w-full overflow-x-hidden">
     <!-- Desktop Layout -->
     <div class="hidden lg:block w-full min-h-screen">
-      <div class="max-w-6xl mx-auto p-8">
+      <div class="px-8 py-8 md:px-12 lg:px-16 xl:px-24 2xl:px-32">
         <!-- Page Header -->
         <div class="mb-12">
           <h1 class="text-5xl font-bold text-emerald-500 mb-3">Profile Settings</h1>

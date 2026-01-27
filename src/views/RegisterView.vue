@@ -2,7 +2,7 @@
   <main class="relative w-full p-0 m-0 max-w-full overflow-x-hidden">
     <!-- Desktop Layout -->
     <div class="hidden lg:block w-full">
-      <div class="p-8 max-w-7xl mx-auto">
+      <div class="px-8 py-8 md:px-12 lg:px-16 xl:px-24 2xl:px-32">
         <h1 class="text-5xl font-bold mb-8 text-emerald-500">Registrieren</h1>
 
         <form @submit.prevent="register" class="max-w-md space-y-8">

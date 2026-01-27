@@ -2,7 +2,7 @@
   <main class="relative w-full p-0 m-0 max-w-full overflow-x-hidden">
     <!-- Desktop Layout -->
     <div class="hidden lg:block w-full">
-      <div class="p-8 max-w-7xl mx-auto">
+      <div class="px-8 py-8 md:px-12 lg:px-16 xl:px-24 2xl:px-32">
         <h1 class="text-5xl font-bold mb-8 text-emerald-500">Login</h1>
 
         <form @submit.prevent="login" class="max-w-md space-y-8">
@@ -104,12 +104,13 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ErrorDisplayComponent from '@/components/ErrorDisplayComponent.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 
 const email = ref('')
 const password = ref('')
@@ -126,7 +127,9 @@ async function login() {
       emailOrUsername: email.value,
       password: password.value,
     })
-    router.push('/')
+    // Redirect to intended destination or default to home
+    const redirectTo = route.query.redirect || '/'
+    router.push(redirectTo)
   } catch (e) {
     console.error(e)
     errorMessage.value = e.message || 'Email oder Passwort falsch!'

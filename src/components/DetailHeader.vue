@@ -18,7 +18,7 @@ const props = defineProps({
 })
 
 const containerClasses = computed(() => {
-  return props.variant === 'main' ? 'post-content max-w-4xl mb-8' : 'post-content'
+  return props.variant === 'main' ? 'post-content max-w-6xl mb-8' : 'post-content'
 })
 
 const titleClasses = computed(() => {

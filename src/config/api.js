@@ -11,23 +11,80 @@ export const apiClient = axios.create({
   },
 })
 
-// Add request interceptor to include JWT token if available
+/**
+ * Decode a JWT token and return its payload
+ * @param {string} token - The JWT token to decode
+ * @returns {Object|null} The decoded payload or null if invalid
+ */
+export function decodeJwt(token) {
+  if (!token) return null
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(''),
+    )
+    return JSON.parse(jsonPayload)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Check if a JWT token is expired
+ * @param {string} token - The JWT token to check
+ * @returns {boolean} True if expired or invalid, false if still valid
+ */
+export function isTokenExpired(token) {
+  const payload = decodeJwt(token)
+  if (!payload || !payload.exp) return true
+  // exp is in seconds, Date.now() is in milliseconds
+  // Add a 30-second buffer to account for clock skew
+  return Date.now() >= (payload.exp * 1000) - 30000
+}
+
+/**
+ * Get the token from localStorage session
+ * @returns {string|null} The JWT token or null
+ */
+export function getStoredToken() {
+  const session = localStorage.getItem('session')
+  if (!session) return null
+  try {
+    const { token } = JSON.parse(session)
+    return token || null
+  } catch {
+    return null
+  }
+}
+
+// Add request interceptor to include JWT token if available and valid
 apiClient.interceptors.request.use(
   (config) => {
-    const session = localStorage.getItem('session')
-    if (session) {
-      try {
-        const { token } = JSON.parse(session)
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`
-        }
-      } catch {
-        // Invalid session data, ignore
-      }
+    const token = getStoredToken()
+    if (token && !isTokenExpired(token)) {
+      config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },
   (error) => {
+    return Promise.reject(error)
+  },
+)
+
+// Add response interceptor to handle authentication errors
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear invalid session
+      localStorage.removeItem('session')
+      // Dispatch a custom event that the app can listen to for redirecting
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+    }
     return Promise.reject(error)
   },
 )

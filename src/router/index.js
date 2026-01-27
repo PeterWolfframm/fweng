@@ -2,6 +2,32 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import { useAuthStore } from '@/stores/auth'
 
+/**
+ * Route guard that requires authentication
+ * Redirects to login if not authenticated
+ */
+const requireAuth = (to, from, next) => {
+  const auth = useAuthStore()
+  if (!auth.isLoggedIn) {
+    // Store the intended destination for redirect after login
+    next({ name: 'login', query: { redirect: to.fullPath } })
+  } else {
+    next()
+  }
+}
+
+/**
+ * Route guard that redirects authenticated users away from guest-only pages
+ */
+const guestOnly = (to, from, next) => {
+  const auth = useAuthStore()
+  if (auth.isLoggedIn) {
+    next('/profile')
+  } else {
+    next()
+  }
+}
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -44,27 +70,13 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: () => import('../views/LoginView.vue'),
-      beforeEnter: (to, from, next) => {
-        const auth = useAuthStore()
-        if (auth.isLoggedIn) {
-          next('/profile')
-        } else {
-          next()
-        }
-      },
+      beforeEnter: guestOnly,
     },
     {
       path: '/register',
       name: 'register',
       component: () => import('../views/RegisterView.vue'),
-      beforeEnter: (to, from, next) => {
-        const auth = useAuthStore()
-        if (auth.isLoggedIn) {
-          next('/profile')
-        } else {
-          next()
-        }
-      },
+      beforeEnter: guestOnly,
     },
     {
       path: '/help',
@@ -80,33 +92,50 @@ const router = createRouter({
       path: '/profile',
       name: 'profile',
       component: () => import('../views/ProfileView.vue'),
+      beforeEnter: requireAuth,
     },
     {
       path: '/profile/overview',
       name: 'profile-overview',
       component: () => import('../views/ProfileOverviewView.vue'),
+      beforeEnter: requireAuth,
     },
     {
       path: '/profile/settings',
       name: 'profile-settings',
       component: () => import('../views/ProfileView.vue'),
+      beforeEnter: requireAuth,
     },
     {
       path: '/profile/information',
       name: 'profile-information',
       component: () => import('../views/ProfileInformationView.vue'),
+      beforeEnter: requireAuth,
     },
     {
       path: '/profile/history',
       name: 'profile-history',
       component: () => import('../views/ProfileHistoryView.vue'),
+      beforeEnter: requireAuth,
     },
     {
       path: '/profile/:section',
       name: 'profile-section',
       component: () => import('../views/ProfileView.vue'),
+      beforeEnter: requireAuth,
     },
   ],
 })
+
+// Listen for unauthorized events from API and redirect to login
+if (typeof window !== 'undefined') {
+  window.addEventListener('auth:unauthorized', () => {
+    const currentRoute = router.currentRoute.value
+    // Only redirect if on a protected route
+    if (currentRoute.path.startsWith('/profile')) {
+      router.push({ name: 'login', query: { redirect: currentRoute.fullPath } })
+    }
+  })
+}
 
 export default router

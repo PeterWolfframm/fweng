@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { apiClient, fetchAllUsers, addGroupMember, fetchGroupMemberships, createGroup as createGroupApi, updatePost, deletePost } from '@/config/api'
+import { apiClient, fetchAllUsers, addGroupMember, fetchGroupMemberships, createGroup as createGroupApi, updatePost, deletePost, fetchAllGroups, createGroupPost } from '@/config/api'
 import ErrorDisplayComponent from '@/components/ErrorDisplayComponent.vue'
 import PostPreviewCard from '@/components/PostPreviewCard.vue'
 import GroupPreviewCard from '@/components/GroupPreviewCard.vue'
@@ -15,11 +15,16 @@ const isAdmin = computed(() => auth.role === 'ADMIN')
 const postTitle = ref('')
 const postBody = ref('')
 const postVisibility = ref('PUBLIC')
+const selectedGroupId = ref('')
 
 // UI state
 const errorMessage = ref('')
 const successMessage = ref('')
 const isLoading = ref(false)
+
+// Available groups for dropdown
+const availableGroups = ref([])
+const isLoadingAvailableGroups = ref(false)
 
 // User posts state
 const userPosts = ref([])
@@ -206,6 +211,21 @@ const fetchUserGroupMemberships = async () => {
   }
 }
 
+// Fetch available groups for post creation dropdown
+const fetchAvailableGroups = async () => {
+  isLoadingAvailableGroups.value = true
+  
+  try {
+    const response = await fetchAllGroups()
+    availableGroups.value = response.data
+  } catch (error) {
+    console.error('[ProfileOverview] Error fetching available groups:', error)
+    // Silently fail - user can still create posts without groups
+  } finally {
+    isLoadingAvailableGroups.value = false
+  }
+}
+
 // Add member to group
 const handleAddMember = async (groupId) => {
   const userId = selectedUserIds.value[groupId]
@@ -255,6 +275,7 @@ onMounted(() => {
   fetchUserPosts()
   fetchUserGroups()
   fetchUserGroupMemberships()
+  fetchAvailableGroups()
   
   // Fetch users and memberships if admin
   if (isAdmin.value) {
@@ -292,18 +313,38 @@ const createPost = async () => {
   isLoading.value = true
 
   try {
-    await apiClient.post('/posts', {
+    // Create the post
+    const response = await apiClient.post('/posts', {
       title: postTitle.value.trim(),
       body: postBody.value.trim(),
       visibility: postVisibility.value
     })
     
-    successMessage.value = 'Post created successfully!'
+    const createdPostId = response.data.id
+    
+    // If a group is selected, add the post to the group
+    if (selectedGroupId.value) {
+      try {
+        await createGroupPost(selectedGroupId.value, { postId: createdPostId })
+        
+        // Find the group name for success message
+        const selectedGroup = availableGroups.value.find(g => g.id === selectedGroupId.value)
+        const groupName = selectedGroup ? selectedGroup.name : 'group'
+        
+        successMessage.value = `Post created and added to ${groupName}!`
+      } catch (groupError) {
+        console.error('[ProfileOverview] Error adding post to group:', groupError)
+        successMessage.value = 'Post created successfully, but failed to add to group'
+      }
+    } else {
+      successMessage.value = 'Post created successfully!'
+    }
     
     // Clear form
     postTitle.value = ''
     postBody.value = ''
     postVisibility.value = 'PUBLIC'
+    selectedGroupId.value = ''
     
     // Refresh posts list to show new post
     await fetchUserPosts()
@@ -522,7 +563,7 @@ const handleDeletePost = async (postId) => {
   <main class="relative w-full p-0 m-0 max-w-full overflow-x-hidden">
     <!-- Desktop Layout -->
     <div class="hidden lg:block w-full min-h-screen">
-      <div class="max-w-6xl mx-auto p-8">
+      <div class="px-8 py-8 md:px-12 lg:px-16 xl:px-24 2xl:px-32">
         <!-- Page Header -->
         <div class="mb-12">
           <h1 class="text-5xl font-bold text-emerald-500 mb-3">Profile Overview</h1>
@@ -595,6 +636,23 @@ const handleDeletePost = async (postId) => {
                 </select>
               </div>
 
+              <!-- Group (Optional) -->
+              <div>
+                <label class="block text-sm font-medium mb-2 text-emerald-500">
+                  Group (Optional)
+                </label>
+                <select
+                  v-model="selectedGroupId"
+                  :disabled="isLoadingAvailableGroups"
+                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
+                >
+                  <option value="">📝 None (Personal post)</option>
+                  <option v-for="group in availableGroups" :key="group.id" :value="group.id">
+                    👫 {{ group.name }}
+                  </option>
+                </select>
+              </div>
+
               <!-- Action Buttons -->
               <div class="flex gap-4 pt-4">
                 <button
@@ -607,7 +665,7 @@ const handleDeletePost = async (postId) => {
                 </button>
                 <button
                   type="button"
-                  @click="postTitle = ''; postBody = ''; postVisibility = 'PUBLIC'"
+                  @click="postTitle = ''; postBody = ''; postVisibility = 'PUBLIC'; selectedGroupId = ''"
                   class="px-6 py-4 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all font-medium"
                 >
                   Clear
@@ -674,7 +732,7 @@ const handleDeletePost = async (postId) => {
           </div>
 
           <!-- My Posts Section -->
-          <div class="mt-8">
+          <div class="mt-12">
             <h2 class="text-3xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
               <span class="text-4xl">📋</span>
               My Posts
@@ -704,8 +762,8 @@ const handleDeletePost = async (postId) => {
             <ErrorDisplayComponent :message="postActionError" class="mb-6" />
 
             <!-- Posts List -->
-            <div v-if="!isLoadingPosts && userPosts.length > 0" class="space-y-4">
-              <div v-for="post in userPosts" :key="post.id" class="space-y-3">
+            <div v-if="!isLoadingPosts && userPosts.length > 0" class="space-y-6">
+              <div v-for="post in userPosts" :key="post.id">
                 <!-- Edit Mode -->
                 <div v-if="editingPostId === post.id" class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
                   <h3 class="text-lg font-bold text-emerald-500 mb-4">Edit Post</h3>
@@ -772,14 +830,14 @@ const handleDeletePost = async (postId) => {
                 </div>
 
                 <!-- View Mode -->
-                <div v-else>
+                <div v-else class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
                   <PostPreviewCard
                     :post="post"
                     variant="main"
                   />
                   
                   <!-- Action Buttons -->
-                  <div class="flex gap-2 mt-2">
+                  <div class="flex gap-2 mt-4">
                     <button
                       @click="startEditPost(post)"
                       class="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 active:scale-95 transition-all"
@@ -801,7 +859,7 @@ const handleDeletePost = async (postId) => {
           </div>
 
           <!-- My Groups Section -->
-          <div class="mt-8">
+          <div class="mt-12">
             <h2 class="text-3xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
               <span class="text-4xl">👫</span>
               My Groups
@@ -833,15 +891,15 @@ const handleDeletePost = async (postId) => {
             </div>
 
             <!-- Groups List -->
-            <div v-if="!isLoadingGroups && userGroups.length > 0" class="space-y-4">
-              <div v-for="group in userGroups" :key="group.id" class="space-y-3">
+            <div v-if="!isLoadingGroups && userGroups.length > 0" class="space-y-6">
+              <div v-for="group in userGroups" :key="group.id" class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
                 <GroupPreviewCard
                   :group="group"
                   variant="main"
                 />
                 
                 <!-- Add Member UI (Admin only) -->
-                <div v-if="isAdmin" class="bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-4 shadow-md">
+                <div v-if="isAdmin" class="mt-4 pt-4 border-t-2 border-gray-200 dark:border-gray-700">
                   <div class="flex items-center gap-3">
                     <span class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Add Member:</span>
                     <select
@@ -869,7 +927,7 @@ const handleDeletePost = async (postId) => {
           </div>
 
           <!-- My Memberships Section -->
-          <div class="mt-8">
+          <div class="mt-12">
             <h2 class="text-3xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
               <span class="text-4xl">👥</span>
               My Memberships
@@ -892,18 +950,22 @@ const handleDeletePost = async (postId) => {
             </div>
 
             <!-- Memberships List -->
-            <div v-if="!isLoadingUserMemberships && userGroupMemberships.length > 0" class="space-y-4">
-              <GroupPreviewCard
+            <div v-if="!isLoadingUserMemberships && userGroupMemberships.length > 0" class="space-y-6">
+              <div
                 v-for="group in userGroupMemberships"
                 :key="group.id"
-                :group="group"
-                variant="main"
-              />
+                class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg"
+              >
+                <GroupPreviewCard
+                  :group="group"
+                  variant="main"
+                />
+              </div>
             </div>
           </div>
 
           <!-- Group Memberships Overview (Admin only) -->
-          <div v-if="isAdmin" class="mt-8">
+          <div v-if="isAdmin" class="mt-12">
             <h2 class="text-3xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
               <span class="text-4xl">🛡️</span>
               Group Memberships Overview
@@ -1032,6 +1094,23 @@ const handleDeletePost = async (postId) => {
               </select>
             </div>
 
+            <!-- Group (Optional) -->
+            <div>
+              <label class="block text-sm font-medium mb-2 text-emerald-500">
+                Group (Optional)
+              </label>
+              <select
+                v-model="selectedGroupId"
+                :disabled="isLoadingAvailableGroups"
+                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+              >
+                <option value="">📝 None (Personal post)</option>
+                <option v-for="group in availableGroups" :key="group.id" :value="group.id">
+                  👫 {{ group.name }}
+                </option>
+              </select>
+            </div>
+
             <!-- Action Buttons -->
             <div class="flex flex-col gap-3 pt-2">
               <button
@@ -1044,7 +1123,7 @@ const handleDeletePost = async (postId) => {
               </button>
               <button
                 type="button"
-                @click="postTitle = ''; postBody = ''; postVisibility = 'PUBLIC'"
+                @click="postTitle = ''; postBody = ''; postVisibility = 'PUBLIC'; selectedGroupId = ''"
                 class="w-full px-6 py-4 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 transition-all font-medium"
               >
                 Clear
@@ -1108,7 +1187,7 @@ const handleDeletePost = async (postId) => {
         </div>
 
         <!-- My Posts Section -->
-        <div class="mt-8">
+        <div class="mt-12">
           <h2 class="text-2xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
             <span class="text-3xl">📋</span>
             My Posts
@@ -1138,10 +1217,10 @@ const handleDeletePost = async (postId) => {
           </div>
 
           <!-- Posts List -->
-          <div v-if="!isLoadingPosts && userPosts.length > 0" class="space-y-4">
-            <div v-for="post in userPosts" :key="post.id" class="space-y-3">
+          <div v-if="!isLoadingPosts && userPosts.length > 0" class="space-y-6">
+            <div v-for="post in userPosts" :key="post.id">
               <!-- Edit Mode -->
-              <div v-if="editingPostId === post.id" class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-4 shadow-lg">
+              <div v-if="editingPostId === post.id" class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
                 <h3 class="text-base font-bold text-emerald-500 mb-4">Edit Post</h3>
                 <form @submit.prevent="handleUpdatePost(post.id)" class="space-y-4">
                   <!-- Title -->
@@ -1206,14 +1285,14 @@ const handleDeletePost = async (postId) => {
               </div>
 
               <!-- View Mode -->
-              <div v-else>
+              <div v-else class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
                 <PostPreviewCard
                   :post="post"
                   variant="mobile"
                 />
                 
                 <!-- Action Buttons -->
-                <div class="flex gap-2 mt-2">
+                <div class="flex gap-2 mt-4">
                   <button
                     @click="startEditPost(post)"
                     class="flex-1 px-3 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 active:scale-95 transition-all"
@@ -1235,7 +1314,7 @@ const handleDeletePost = async (postId) => {
         </div>
 
         <!-- My Groups Section -->
-        <div class="mt-8">
+        <div class="mt-12">
           <h2 class="text-2xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
             <span class="text-3xl">👫</span>
             My Groups
@@ -1267,15 +1346,15 @@ const handleDeletePost = async (postId) => {
           </div>
 
           <!-- Groups List -->
-          <div v-if="!isLoadingGroups && userGroups.length > 0" class="space-y-4">
-            <div v-for="group in userGroups" :key="group.id" class="space-y-3">
+          <div v-if="!isLoadingGroups && userGroups.length > 0" class="space-y-6">
+            <div v-for="group in userGroups" :key="group.id" class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
               <GroupPreviewCard
                 :group="group"
                 variant="mobile"
               />
               
               <!-- Add Member UI (Admin only) -->
-              <div v-if="isAdmin" class="bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-4 shadow-md">
+              <div v-if="isAdmin" class="mt-4 pt-4 border-t-2 border-gray-200 dark:border-gray-700">
                 <div class="space-y-3">
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Add Member:</label>
                   <select
@@ -1303,7 +1382,7 @@ const handleDeletePost = async (postId) => {
         </div>
 
         <!-- My Memberships Section -->
-        <div class="mt-8">
+        <div class="mt-12">
           <h2 class="text-2xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
             <span class="text-3xl">👥</span>
             My Memberships
@@ -1326,18 +1405,22 @@ const handleDeletePost = async (postId) => {
           </div>
 
           <!-- Memberships List -->
-          <div v-if="!isLoadingUserMemberships && userGroupMemberships.length > 0" class="space-y-4">
-            <GroupPreviewCard
+          <div v-if="!isLoadingUserMemberships && userGroupMemberships.length > 0" class="space-y-6">
+            <div
               v-for="group in userGroupMemberships"
               :key="group.id"
-              :group="group"
-              variant="mobile"
-            />
+              class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg"
+            >
+              <GroupPreviewCard
+                :group="group"
+                variant="mobile"
+              />
+            </div>
           </div>
         </div>
 
         <!-- Group Memberships Overview (Admin only) -->
-        <div v-if="isAdmin" class="mt-8">
+        <div v-if="isAdmin" class="mt-12">
           <h2 class="text-2xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
             <span class="text-3xl">🛡️</span>
             Group Memberships Overview
