@@ -14,6 +14,7 @@ const isAdmin = computed(() => auth.role === 'ADMIN')
 // Form data for create post
 const postTitle = ref('')
 const postBody = ref('')
+const postVisibility = ref('PUBLIC')
 
 // UI state
 const errorMessage = ref('')
@@ -283,7 +284,8 @@ const createPost = async () => {
   try {
     await apiClient.post('/posts', {
       title: postTitle.value.trim(),
-      body: postBody.value.trim()
+      body: postBody.value.trim(),
+      visibility: postVisibility.value
     })
     
     successMessage.value = 'Post created successfully!'
@@ -291,6 +293,7 @@ const createPost = async () => {
     // Clear form
     postTitle.value = ''
     postBody.value = ''
+    postVisibility.value = 'PUBLIC'
     
     // Refresh posts list to show new post
     await fetchUserPosts()
@@ -445,6 +448,20 @@ const createGroup = async () => {
                 ></textarea>
               </div>
 
+              <!-- Visibility -->
+              <div>
+                <label class="block text-sm font-medium mb-2 text-emerald-500">
+                  Visibility
+                </label>
+                <select
+                  v-model="postVisibility"
+                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
+                >
+                  <option value="PUBLIC">🌍 Public</option>
+                  <option value="PRIVATE">🔒 Private</option>
+                </select>
+              </div>
+
               <!-- Action Buttons -->
               <div class="flex gap-4 pt-4">
                 <button
@@ -457,7 +474,7 @@ const createGroup = async () => {
                 </button>
                 <button
                   type="button"
-                  @click="postTitle = ''; postBody = ''"
+                  @click="postTitle = ''; postBody = ''; postVisibility = 'PUBLIC'"
                   class="px-6 py-4 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all font-medium"
                 >
                   Clear
@@ -775,6 +792,20 @@ const createGroup = async () => {
               ></textarea>
             </div>
 
+            <!-- Visibility -->
+            <div>
+              <label class="block text-sm font-medium mb-2 text-emerald-500">
+                Visibility
+              </label>
+              <select
+                v-model="postVisibility"
+                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+              >
+                <option value="PUBLIC">🌍 Public</option>
+                <option value="PRIVATE">🔒 Private</option>
+              </select>
+            </div>
+
             <!-- Action Buttons -->
             <div class="flex flex-col gap-3 pt-2">
               <button
@@ -787,7 +818,7 @@ const createGroup = async () => {
               </button>
               <button
                 type="button"
-                @click="postTitle = ''; postBody = ''"
+                @click="postTitle = ''; postBody = ''; postVisibility = 'PUBLIC'"
                 class="w-full px-6 py-4 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 transition-all font-medium"
               >
                 Clear
