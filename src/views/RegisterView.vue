@@ -6,8 +6,6 @@
         <h1 class="text-5xl font-bold mb-8 text-emerald-500">Registrieren</h1>
 
         <form @submit.prevent="register" class="max-w-md space-y-8">
-          <p v-if="errors.general" class="text-red-600 dark:text-red-400 text-sm p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800">{{ errors.general }}</p>
-
           <!-- Username -->
           <div>
             <label class="text-sm font-medium mb-2 text-emerald-500 block">
@@ -71,6 +69,9 @@
           >
             Registrieren
           </button>
+
+          <!-- Error Display -->
+          <ErrorDisplayComponent :message="errors.general" />
         </form>
 
         <p class="mt-6 text-sm">
@@ -85,8 +86,6 @@
       <h1 class="text-4xl font-bold mb-8 text-emerald-500">Registrieren</h1>
 
       <form @submit.prevent="register" class="space-y-8">
-        <p v-if="errors.general" class="text-red-600 dark:text-red-400 text-sm p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800">{{ errors.general }}</p>
-
         <!-- Username -->
         <div>
           <label class="text-sm font-medium mb-2 text-emerald-500 block">
@@ -150,6 +149,9 @@
         >
           Registrieren
         </button>
+
+        <!-- Error Display -->
+        <ErrorDisplayComponent :message="errors.general" />
       </form>
 
       <p class="mt-6 text-sm">
@@ -166,6 +168,7 @@ import * as yup from "yup";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { apiClient } from "@/config/api";
+import ErrorDisplayComponent from "@/components/ErrorDisplayComponent.vue";
 
 const router = useRouter();
 const auth = useAuthStore();

@@ -39,6 +39,9 @@
           >
             Einloggen
           </button>
+
+          <!-- Error Display -->
+          <ErrorDisplayComponent :message="errorMessage" />
         </form>
 
         <p class="mt-6 text-sm">
@@ -86,6 +89,9 @@
         >
           Einloggen
         </button>
+
+        <!-- Error Display -->
+        <ErrorDisplayComponent :message="errorMessage" />
       </form>
 
       <p class="mt-6 text-sm">
@@ -99,7 +105,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import {useAuthStore} from '@/stores/auth'
+import { useAuthStore } from '@/stores/auth'
+import ErrorDisplayComponent from '@/components/ErrorDisplayComponent.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -119,12 +126,10 @@ async function login() {
       emailOrUsername: email.value,
       password: password.value,
     })
-    alert('Login erfolgreich!')
     router.push('/')
   } catch (e) {
     console.error(e)
     errorMessage.value = e.message || 'Email oder Passwort falsch!'
-    alert(errorMessage.value)
   } finally {
     isLoading.value = false
   }
