@@ -1,13 +1,4 @@
-const USERS_KEY = "fweng_users";
-const SESSION_KEY = "fweng_session";
-
-export function loadUsers() {
-  return JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
-}
-
-export function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
+const SESSION_KEY = "session";
 
 export function loadSession() {
   return JSON.parse(localStorage.getItem(SESSION_KEY) || "null");

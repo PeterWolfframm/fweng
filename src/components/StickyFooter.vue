@@ -1,9 +1,11 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const isProfileMenuOpen = ref(false)
 const profileButtonRef = ref(null)
 const isDark = ref(false)
@@ -51,12 +53,21 @@ const navItems = [
 ]
 
 const profileSubMenuItems = [
-  { name: 'memberships', path: '/profile/memberships', emoji: '🎫' },
+  { name: 'overview', path: '/profile/overview', emoji: '🎫' },
   { name: 'settings', path: '/profile/settings', emoji: '⚙️' },
   { name: 'login', path: '/login', emoji: '🔐' },
   { name: 'register', path: '/register', emoji: '📝' },
   { name: 'theme', action: 'toggleTheme', emoji: 'theme' },
 ]
+
+const filteredProfileSubMenuItems = computed(() => {
+  if (auth.isLoggedIn) {
+    return profileSubMenuItems.filter(
+      item => item.name !== 'login' && item.name !== 'register'
+    )
+  }
+  return profileSubMenuItems
+})
 
 const isActive = (path) => {
   if (path === '/') {
@@ -97,20 +108,21 @@ const navigateToSubMenu = (subItem) => {
                 <div v-if="isProfileMenuOpen" class="submenu-container">
                   <div class="flex flex-col gap-2">
                     <button
-                      v-for="subItem in profileSubMenuItems"
+                      v-for="subItem in filteredProfileSubMenuItems"
                       :key="subItem.name"
                       @click="navigateToSubMenu(subItem)"
-                      class="submenu-item flex flex-col items-center justify-center rounded-lg transition-all duration-200 hover:bg-emerald-500/10 hover:scale-105"
+                      class="submenu-item flex flex-col lg:flex-row items-center justify-center lg:justify-start rounded-lg transition-all duration-200 hover:bg-emerald-500/10 hover:scale-105 lg:gap-3 lg:px-4"
                       :class="{
                         'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400':
-                          subItem.action === 'toggleTheme' ? isDark : isActive(subItem.path),
+                          subItem.action !== 'toggleTheme' && isActive(subItem.path),
                         'text-gray-600 dark:text-gray-400 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm':
-                          subItem.action === 'toggleTheme' ? !isDark : !isActive(subItem.path),
+                          subItem.action === 'toggleTheme' || !isActive(subItem.path),
                       }"
                     >
                       <span class="text-2xl">{{
                         subItem.action === 'toggleTheme' ? (isDark ? '☀️' : '🌙') : subItem.emoji
                       }}</span>
+                      <span class="hidden lg:block text-sm font-medium capitalize">{{ subItem.name }}</span>
                     </button>
                   </div>
                 </div>
@@ -185,6 +197,14 @@ const navigateToSubMenu = (subItem) => {
   height: 60px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+@media (min-width: 1024px) {
+  .submenu-item {
+    width: auto;
+    min-width: 140px;
+    height: 50px;
+  }
 }
 
 .dark .submenu-item:not(.bg-emerald-500\/10) {

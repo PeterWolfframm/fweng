@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import StickyFooter from './components/StickyFooter.vue'
 
@@ -8,6 +8,13 @@ import { useAuthStore } from '@/stores/auth'
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+
+// Fetch current user on app mount if logged in
+onMounted(() => {
+  if (auth.isLoggedIn) {
+    auth.fetchCurrentUser()
+  }
+})
 
 const isHome = computed(() => route.path === '/')
 const isArticles = computed(() => route.path.startsWith('/posts'))
