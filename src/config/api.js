@@ -31,3 +31,48 @@ apiClient.interceptors.request.use(
     return Promise.reject(error)
   },
 )
+
+// API Methods
+
+/**
+ * Fetch all users (for admin user selection)
+ * @returns {Promise} Response with array of user objects
+ */
+export const fetchAllUsers = async () => {
+  return await apiClient.get('/users')
+}
+
+/**
+ * Add a member to a group
+ * @param {string|number} groupId - The group ID
+ * @param {string} userId - The user ID to add
+ * @returns {Promise} Response with updated GroupDto object
+ */
+export const addGroupMember = async (groupId, userId) => {
+  return await apiClient.post(`/groups/${groupId}/members`, { userId })
+}
+
+/**
+ * Get overview of all user-group memberships (admin only)
+ * @returns {Promise} Response with array of UserGroupViewDto objects
+ */
+export const fetchGroupMemberships = async () => {
+  return await apiClient.get('/groups/memberships')
+}
+
+/**
+ * Create a new group
+ * @param {string} name - The group name
+ * @returns {Promise} Response with created GroupDto object
+ */
+export const createGroup = async (name) => {
+  return await apiClient.post('/groups', { name })
+}
+
+/**
+ * Fetch all posts
+ * @returns {Promise} Response with array of PostDto objects
+ */
+export const fetchAllPosts = async () => {
+  return await apiClient.get('/posts')
+}
