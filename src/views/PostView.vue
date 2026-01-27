@@ -5,10 +5,12 @@ import TwoColumnLayout from '../components/TwoColumnLayout.vue'
 import FullScreenWidth from '../components/FullScreenWidth.vue'
 import PostPreviewCard from '../components/PostPreviewCard.vue'
 import DetailHeader from '../components/DetailHeader.vue'
+import { useAuthStore } from '@/stores/auth'
 import { fetchPublicPosts, fetchAllGroups, fetchAllGroupPosts } from '@/config/api'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 
 const posts = ref([])
 const loading = ref(true)
@@ -31,26 +33,30 @@ onMounted(async () => {
     
     let groupsMap = {}
     let groupsEmojiMap = {}
-    try {
-      const groupPostsResponse = await fetchAllGroupPosts()
-      groupPostAssociations.value = groupPostsResponse.data.map(gp => ({
-        postId: gp.postId,
-        groupId: gp.groupId,
-        sharedBy: gp.username,
-        sharedById: gp.userId
-      }))
-      
-      const groupsResponse = await fetchAllGroups()
-      groupsMap = groupsResponse.data.reduce((map, group) => {
-        map[group.id] = group.name
-        return map
-      }, {})
-      groupsEmojiMap = groupsResponse.data.reduce((map, group) => {
-        map[group.id] = group.emoji || '👥'
-        return map
-      }, {})
-    } catch (err) {
-      console.error('Failed to fetch group associations:', err)
+    
+    // Only fetch group associations if logged in (backend requires auth)
+    if (auth.isLoggedIn) {
+      try {
+        const groupPostsResponse = await fetchAllGroupPosts()
+        groupPostAssociations.value = groupPostsResponse.data.map(gp => ({
+          postId: gp.postId,
+          groupId: gp.groupId,
+          sharedBy: gp.username,
+          sharedById: gp.userId
+        }))
+        
+        const groupsResponse = await fetchAllGroups()
+        groupsMap = groupsResponse.data.reduce((map, group) => {
+          map[group.id] = group.name
+          return map
+        }, {})
+        groupsEmojiMap = groupsResponse.data.reduce((map, group) => {
+          map[group.id] = group.emoji || '👥'
+          return map
+        }, {})
+      } catch (err) {
+        console.error('Failed to fetch group associations:', err)
+      }
     }
     
     posts.value = response.data.map(post => {
@@ -82,9 +88,6 @@ onMounted(async () => {
   <div v-else-if="error" class="flex justify-center items-center min-h-screen">
     <div class="text-center">
       <p class="text-red-500 dark:text-red-400 mb-2">{{ error }}</p>
-      <p class="text-sm text-gray-500 dark:text-gray-400">
-        Please make sure you're logged in to view posts.
-      </p>
     </div>
   </div>
 

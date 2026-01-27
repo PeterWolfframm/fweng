@@ -6,7 +6,7 @@ import FullScreenWidth from '../components/FullScreenWidth.vue'
 import GroupPreviewCard from '../components/GroupPreviewCard.vue'
 import PostPreviewCard from '../components/PostPreviewCard.vue'
 import DetailHeader from '../components/DetailHeader.vue'
-import { fetchAllGroups, fetchGroupPosts, fetchAllGroupPosts, joinGroup, apiClient } from '@/config/api'
+import { fetchAllGroups, fetchGroupPosts, fetchAllGroupPosts, fetchPublicPosts, joinGroup, apiClient } from '@/config/api'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -52,36 +52,59 @@ const groupPosts = computed(() => {
 })
 
 onMounted(async () => {
-  try {
-    loading.value = true
-    error.value = null
-    
-    const response = await fetchAllGroups()
-    
-    groups.value = response.data.map(group => ({
-      ...group,
-      emoji: group.emoji || '👥',
-      description: group.description || 'A community for sharing and discussion.'
-    }))
-  } catch (err) {
-    console.error('Failed to fetch groups:', err)
-    error.value = err.response?.data?.message || 'Failed to load groups. Please try again.'
-  } finally {
+  // Fetch groups list - only if logged in (backend requires auth)
+  if (auth.isLoggedIn) {
+    try {
+      loading.value = true
+      error.value = null
+      
+      const response = await fetchAllGroups()
+      
+      groups.value = response.data.map(group => ({
+        ...group,
+        emoji: group.emoji || '👥',
+        description: group.description || 'A community for sharing and discussion.'
+      }))
+    } catch (err) {
+      console.error('Failed to fetch groups:', err)
+      error.value = err.response?.data?.message || 'Failed to load groups.'
+    } finally {
+      loading.value = false
+    }
+  } else {
+    // Not logged in - create placeholder group from route params
     loading.value = false
+    const groupName = route.params.name
+    if (groupName) {
+      groups.value = [{
+        name: groupName,
+        emoji: '👥',
+        description: 'Login to see full group details'
+      }]
+    }
   }
 
+  // Fetch posts and group associations
   try {
     postsLoading.value = true
     postsError.value = null
     
-    const groupPostsResponse = await fetchAllGroupPosts()
-    groupPostAssociations.value = groupPostsResponse.data.map(gp => ({
-      groupId: gp.groupId,
-      postId: gp.postId,
-      sharedBy: gp.username,
-      sharedById: gp.userId
-    }))
+    // Only fetch group associations if logged in (backend requires auth)
+    if (auth.isLoggedIn) {
+      try {
+        const groupPostsResponse = await fetchAllGroupPosts()
+        groupPostAssociations.value = groupPostsResponse.data.map(gp => ({
+          groupId: gp.groupId,
+          postId: gp.postId,
+          sharedBy: gp.username,
+          sharedById: gp.userId
+        }))
+      } catch (err) {
+        console.error('Failed to fetch group associations:', err)
+      }
+    }
     
+    // Fetch posts based on auth status
     if (auth.isLoggedIn) {
       try {
         const response = await fetchGroupPosts()
@@ -108,10 +131,24 @@ onMounted(async () => {
         posts.value = []
       }
     } else {
-      posts.value = []
+      // Fetch public posts for logged-out users
+      try {
+        const response = await fetchPublicPosts()
+        
+        posts.value = response.data.map(post => ({
+          id: post.id,
+          title: post.title,
+          content: post.body,
+          icon: '💬',
+          createdAt: post.createdAt
+        }))
+      } catch (err) {
+        console.error('Failed to fetch public posts:', err)
+        posts.value = []
+      }
     }
   } catch (err) {
-    console.error('Failed to fetch group data:', err)
+    console.error('Failed to fetch post data:', err)
     postsError.value = err.response?.data?.message || 'Failed to load posts.'
   } finally {
     postsLoading.value = false
@@ -196,12 +233,9 @@ watch(currentGroup, () => {
     <p class="text-gray-500 dark:text-gray-400">Loading groups...</p>
   </div>
 
-  <div v-else-if="error" class="flex justify-center items-center min-h-screen">
+  <div v-else-if="error && auth.isLoggedIn" class="flex justify-center items-center min-h-screen">
     <div class="text-center">
       <p class="text-red-500 dark:text-red-400 mb-2">{{ error }}</p>
-      <p class="text-sm text-gray-500 dark:text-gray-400">
-        Please make sure you're logged in to view groups.
-      </p>
     </div>
   </div>
 
@@ -244,7 +278,9 @@ watch(currentGroup, () => {
       </div>
 
       <div v-else-if="groupPosts.length === 0" class="text-center py-8">
-        <p class="text-gray-500 dark:text-gray-400">No posts in this group yet.</p>
+        <p class="text-gray-500 dark:text-gray-400">
+          {{ auth.isLoggedIn ? 'No posts in this group yet.' : 'Login to see posts in this group.' }}
+        </p>
       </div>
 
       <PostPreviewCard
@@ -293,7 +329,9 @@ watch(currentGroup, () => {
         </div>
 
         <div v-else-if="groupPosts.length === 0" class="text-center py-8">
-          <p class="text-gray-500 dark:text-gray-400">No posts in this group yet.</p>
+          <p class="text-gray-500 dark:text-gray-400">
+            {{ auth.isLoggedIn ? 'No posts in this group yet.' : 'Login to see posts in this group.' }}
+          </p>
         </div>
 
         <PostPreviewCard

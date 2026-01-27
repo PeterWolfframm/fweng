@@ -23,6 +23,7 @@ const groupPostAssociations = ref([])
 const firstThreeGroups = computed(() => groups.value.slice(0, 3))
 
 onMounted(async () => {
+  // Fetch user's groups if logged in
   if (auth.isLoggedIn) {
     try {
       const myGroupsResponse = await fetchMyGroups()
@@ -32,6 +33,7 @@ onMounted(async () => {
     }
   }
 
+  // Fetch public posts
   try {
     loading.value = true
     error.value = null
@@ -40,26 +42,30 @@ onMounted(async () => {
     
     let groupsMap = {}
     let groupsEmojiMap = {}
-    try {
-      const groupPostsResponse = await fetchAllGroupPosts()
-      groupPostAssociations.value = groupPostsResponse.data.map(gp => ({
-        postId: gp.postId,
-        groupId: gp.groupId,
-        sharedBy: gp.username,
-        sharedById: gp.userId
-      }))
-      
-      const groupsResponse = await fetchAllGroups()
-      groupsMap = groupsResponse.data.reduce((map, group) => {
-        map[group.id] = group.name
-        return map
-      }, {})
-      groupsEmojiMap = groupsResponse.data.reduce((map, group) => {
-        map[group.id] = group.emoji || '👥'
-        return map
-      }, {})
-    } catch (err) {
-      console.error('Failed to fetch group associations:', err)
+    
+    // Only fetch group associations if logged in (backend requires auth)
+    if (auth.isLoggedIn) {
+      try {
+        const groupPostsResponse = await fetchAllGroupPosts()
+        groupPostAssociations.value = groupPostsResponse.data.map(gp => ({
+          postId: gp.postId,
+          groupId: gp.groupId,
+          sharedBy: gp.username,
+          sharedById: gp.userId
+        }))
+        
+        const groupsResponse = await fetchAllGroups()
+        groupsMap = groupsResponse.data.reduce((map, group) => {
+          map[group.id] = group.name
+          return map
+        }, {})
+        groupsEmojiMap = groupsResponse.data.reduce((map, group) => {
+          map[group.id] = group.emoji || '👥'
+          return map
+        }, {})
+      } catch (err) {
+        console.error('Failed to fetch group associations:', err)
+      }
     }
     
     const mappedPosts = response.data.map(post => {
@@ -91,21 +97,27 @@ onMounted(async () => {
     loading.value = false
   }
 
-  try {
-    groupsLoading.value = true
-    groupsError.value = null
-    
-    const response = await fetchAllGroups()
-    
-    groups.value = response.data.map(group => ({
-      ...group,
-      emoji: group.emoji || '👥',
-      description: group.description || 'A community for sharing and discussion.'
-    }))
-  } catch (err) {
-    console.error('Failed to fetch groups:', err)
-    groupsError.value = err.response?.data?.message || 'Failed to load groups.'
-  } finally {
+  // Fetch groups for sidebar - only if logged in (backend requires auth)
+  if (auth.isLoggedIn) {
+    try {
+      groupsLoading.value = true
+      groupsError.value = null
+      
+      const response = await fetchAllGroups()
+      
+      groups.value = response.data.map(group => ({
+        ...group,
+        emoji: group.emoji || '👥',
+        description: group.description || 'A community for sharing and discussion.'
+      }))
+    } catch (err) {
+      console.error('Failed to fetch groups:', err)
+      groupsError.value = err.response?.data?.message || 'Failed to load groups.'
+    } finally {
+      groupsLoading.value = false
+    }
+  } else {
+    // Not logged in - skip group fetching
     groupsLoading.value = false
   }
 })
@@ -120,7 +132,11 @@ onMounted(async () => {
           @{{ auth.currentUser.username }}
         </p>
         <div class="mt-12">
-          <div v-if="groupsLoading" class="text-sm text-gray-500 dark:text-gray-400">
+          <div v-if="!auth.isLoggedIn" class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="mb-2">Login to see groups</p>
+          </div>
+          
+          <div v-else-if="groupsLoading" class="text-sm text-gray-500 dark:text-gray-400">
             Loading groups...
           </div>
           
@@ -147,9 +163,6 @@ onMounted(async () => {
 
       <div v-else-if="error" class="text-center py-8">
         <p class="text-red-500 dark:text-red-400 mb-2">{{ error }}</p>
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          Please make sure you're logged in to view posts.
-        </p>
       </div>
 
       <div v-else-if="articles.length === 0" class="text-center py-8">
@@ -175,9 +188,6 @@ onMounted(async () => {
 
       <div v-else-if="error" class="text-center py-8">
         <p class="text-red-500 dark:text-red-400 mb-2">{{ error }}</p>
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          Please make sure you're logged in to view posts.
-        </p>
       </div>
 
       <div v-else-if="articles.length === 0" class="text-center py-8">
