@@ -43,7 +43,7 @@ export function isTokenExpired(token) {
   if (!payload || !payload.exp) return true
   // exp is in seconds, Date.now() is in milliseconds
   // Add a 30-second buffer to account for clock skew
-  return Date.now() >= (payload.exp * 1000) - 30000
+  return Date.now() >= payload.exp * 1000 - 30000
 }
 
 /**
@@ -100,13 +100,22 @@ export const fetchAllUsers = async () => {
 }
 
 /**
- * Add a member to a group
+ * Add a member to a group (requires authentication, admin/creator only)
  * @param {string|number} groupId - The group ID
  * @param {string} userId - The user ID to add
  * @returns {Promise} Response with updated GroupDto object
  */
 export const addGroupMember = async (groupId, userId) => {
   return await apiClient.post(`/groups/${groupId}/members`, { userId })
+}
+
+/**
+ * Join a group (self-service for authenticated users)
+ * @param {string|number} groupId - The group ID to join
+ * @returns {Promise} Response with updated GroupDto object
+ */
+export const joinGroup = async (groupId) => {
+  return await apiClient.post(`/groups/${groupId}/join`)
 }
 
 /**
@@ -151,7 +160,7 @@ export const fetchAllGroups = async () => {
 }
 
 /**
- * Fetch a single group by ID (requires authentication + read permission)
+ * Fetch a single group by ID (public endpoint, no authentication required)
  * @param {string|number} groupId - The group ID
  * @returns {Promise} Response with GroupDto object
  */
@@ -264,7 +273,8 @@ export const deleteGroup = async (groupId) => {
 
 /**
  * Fetch all group posts (public endpoint)
- * @returns {Promise} Response with array of GroupPostDto objects
+ * @returns {Promise} Response with array of GroupPostResponseDto objects
+ * @description GroupPostResponseDto includes: id, groupId, postId, userId, username
  */
 export const fetchAllGroupPosts = async () => {
   return await apiClient.get('/groupposts')

@@ -1,10 +1,19 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { apiClient, fetchAllUsers, addGroupMember, fetchGroupMemberships, createGroup as createGroupApi, updatePost, deletePost, fetchAllGroups, createGroupPost } from '@/config/api'
+import { apiClient, fetchAllUsers, addGroupMember, fetchGroupMemberships, createGroup as createGroupApi, updatePost, deletePost, fetchAllGroups, createGroupPost, deleteGroupPost } from '@/config/api'
 import ErrorDisplayComponent from '@/components/ErrorDisplayComponent.vue'
 import PostPreviewCard from '@/components/PostPreviewCard.vue'
 import GroupPreviewCard from '@/components/GroupPreviewCard.vue'
+import SuccessMessage from '@/components/SuccessMessage.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import EmptyState from '@/components/EmptyState.vue'
+import SectionHeader from '@/components/SectionHeader.vue'
+import FormCard from '@/components/FormCard.vue'
+import PostEditForm from '@/components/PostEditForm.vue'
+import PostActionsCard from '@/components/PostActionsCard.vue'
+import GroupChangeUI from '@/components/GroupChangeUI.vue'
+import AddMemberSection from '@/components/AddMemberSection.vue'
 
 const auth = useAuthStore()
 
@@ -76,6 +85,13 @@ const isUpdatingPost = ref(false)
 const isDeletingPostId = ref(null)
 const postActionError = ref('')
 const postActionSuccess = ref('')
+
+// Post group management state
+const changingGroupForPostId = ref(null)
+const newGroupIdForPost = ref('')
+const isChangingPostGroup = ref(false)
+const allGroupPosts = ref([])
+const isLoadingGroupPosts = ref(false)
 
 // Fetch user's posts
 const fetchUserPosts = async () => {
@@ -276,6 +292,7 @@ onMounted(() => {
   fetchUserGroups()
   fetchUserGroupMemberships()
   fetchAvailableGroups()
+  fetchAllGroupPosts()
   
   // Fetch users and memberships if admin
   if (isAdmin.value) {
@@ -455,27 +472,28 @@ const cancelEditPost = () => {
 }
 
 // Update post
-const handleUpdatePost = async (postId) => {
+const handleUpdatePost = async (data) => {
+  const { postId, title, body, visibility } = data
   postActionError.value = ''
   postActionSuccess.value = ''
   
   // Validation
-  if (!editPostTitle.value.trim()) {
+  if (!title.trim()) {
     postActionError.value = 'Please enter a title'
     return
   }
   
-  if (editPostTitle.value.trim().length < 3 || editPostTitle.value.trim().length > 30) {
+  if (title.trim().length < 3 || title.trim().length > 30) {
     postActionError.value = 'Title must be between 3 and 30 characters'
     return
   }
   
-  if (!editPostBody.value.trim()) {
+  if (!body.trim()) {
     postActionError.value = 'Please enter post content'
     return
   }
   
-  if (editPostBody.value.trim().length < 3 || editPostBody.value.trim().length > 100) {
+  if (body.trim().length < 3 || body.trim().length > 100) {
     postActionError.value = 'Body must be between 3 and 100 characters'
     return
   }
@@ -484,9 +502,9 @@ const handleUpdatePost = async (postId) => {
 
   try {
     await updatePost(postId, {
-      title: editPostTitle.value.trim(),
-      body: editPostBody.value.trim(),
-      visibility: editPostVisibility.value
+      title: title.trim(),
+      body: body.trim(),
+      visibility: visibility
     })
     
     postActionSuccess.value = 'Post updated successfully!'
@@ -557,13 +575,120 @@ const handleDeletePost = async (postId) => {
     isDeletingPostId.value = null
   }
 }
+
+// Fetch all group posts to determine post-group associations
+const fetchAllGroupPosts = async () => {
+  isLoadingGroupPosts.value = true
+  
+  try {
+    const response = await apiClient.get('/groupposts')
+    allGroupPosts.value = response.data.map(gp => ({
+      ...gp,
+      sharedBy: gp.username,
+      sharedById: gp.userId
+    }))
+  } catch (error) {
+    console.error('[ProfileOverview] Error fetching group posts:', error)
+    // Silently fail - group management will just not show current group
+  } finally {
+    isLoadingGroupPosts.value = false
+  }
+}
+
+// Get the group post entry for a specific post
+const getGroupPostForPost = (postId) => {
+  return allGroupPosts.value.find(gp => gp.postId === postId)
+}
+
+// Get the current group ID for a post
+const getCurrentGroupForPost = (postId) => {
+  const groupPost = getGroupPostForPost(postId)
+  return groupPost ? groupPost.groupId : null
+}
+
+// Get the current group name for a post
+const getCurrentGroupNameForPost = (postId) => {
+  const groupId = getCurrentGroupForPost(postId)
+  if (!groupId) return null
+  const group = availableGroups.value.find(g => g.id === groupId)
+  return group ? group.name : 'Unknown Group'
+}
+
+// Start changing group for a post
+const startChangeGroup = (postId) => {
+  changingGroupForPostId.value = postId
+  newGroupIdForPost.value = getCurrentGroupForPost(postId) || ''
+  postActionError.value = ''
+  postActionSuccess.value = ''
+}
+
+// Cancel changing group
+const cancelChangeGroup = () => {
+  changingGroupForPostId.value = null
+  newGroupIdForPost.value = ''
+  postActionError.value = ''
+}
+
+// Handle changing the group of a post
+const handleChangePostGroup = async (postId) => {
+  postActionError.value = ''
+  postActionSuccess.value = ''
+  isChangingPostGroup.value = true
+
+  try {
+    // Find current group post association
+    const currentGroupPost = getGroupPostForPost(postId)
+    
+    // If post is currently in a group, delete that association
+    if (currentGroupPost) {
+      await deleteGroupPost(currentGroupPost.id)
+    }
+    
+    // If a new group is selected, create new association
+    if (newGroupIdForPost.value) {
+      await createGroupPost(newGroupIdForPost.value, { postId })
+      
+      const selectedGroup = availableGroups.value.find(g => g.id === newGroupIdForPost.value)
+      const groupName = selectedGroup ? selectedGroup.name : 'group'
+      
+      postActionSuccess.value = `Post group updated to ${groupName}!`
+    } else {
+      postActionSuccess.value = 'Post removed from all groups!'
+    }
+    
+    // Clear change mode
+    changingGroupForPostId.value = null
+    newGroupIdForPost.value = ''
+    
+    // Refresh group posts to update UI
+    await fetchAllGroupPosts()
+    
+    setTimeout(() => {
+      postActionSuccess.value = ''
+    }, 3000)
+  } catch (error) {
+    if (error.response?.data?.message) {
+      postActionError.value = error.response.data.message
+    } else if (error.response?.status === 401) {
+      postActionError.value = 'You must be logged in to change post groups'
+    } else if (error.response?.status === 403) {
+      postActionError.value = 'You do not have permission to change post groups'
+    } else if (error.message) {
+      postActionError.value = error.message
+    } else {
+      postActionError.value = 'Failed to change post group. Please try again.'
+    }
+  } finally {
+    isChangingPostGroup.value = false
+  }
+}
 </script>
 
 <template>
   <main class="relative w-full p-0 m-0 max-w-full overflow-x-hidden">
     <!-- Desktop Layout -->
     <div class="hidden lg:block w-full min-h-screen">
-      <div class="px-8 py-8 md:px-12 lg:px-16 xl:px-24 2xl:px-32">
+      <div class="px-4 py-8 md:px-6 lg:px-8 xl:px-12 max-w-[1800px] mx-auto">
         <!-- Page Header -->
         <div class="mb-12">
           <h1 class="text-5xl font-bold text-emerald-500 mb-3">Profile Overview</h1>
@@ -574,321 +699,216 @@ const handleDeletePost = async (postId) => {
 
         <div class="space-y-6">
           <!-- Create Post Card -->
-          <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-8 shadow-lg hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300"
+          <FormCard
+            title="Create Post"
+            icon="✍️"
+            description="Share your thoughts with the community"
+            :success-message="successMessage"
+            :error-message="errorMessage"
+            @submit="createPost"
           >
-            <div class="mb-6">
-              <h2 class="text-2xl font-bold text-emerald-500 mb-2 flex items-center gap-2">
-                <span class="text-3xl">✍️</span>
-                Create Post
-              </h2>
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                Share your thoughts with the community
-              </p>
+            <!-- Title -->
+            <div>
+              <label class="block text-sm font-medium mb-2 text-emerald-500">
+                Title
+              </label>
+              <input
+                v-model="postTitle"
+                type="text"
+                placeholder="Enter post title..."
+                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
+              />
             </div>
 
-            <!-- Success/Error Messages -->
-            <div v-if="successMessage" class="mb-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-start gap-3">
-              <span class="text-xl">✓</span>
-              <span>{{ successMessage }}</span>
+            <!-- Body -->
+            <div>
+              <label class="block text-sm font-medium mb-2 text-emerald-500">
+                Body
+              </label>
+              <textarea
+                v-model="postBody"
+                rows="8"
+                placeholder="Write your post content..."
+                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400 resize-vertical"
+              ></textarea>
             </div>
 
-            <ErrorDisplayComponent :message="errorMessage" class="mb-6" />
+            <!-- Visibility -->
+            <div>
+              <label class="block text-sm font-medium mb-2 text-emerald-500">
+                Visibility
+              </label>
+              <select
+                v-model="postVisibility"
+                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
+              >
+                <option value="PUBLIC">🌍 Public</option>
+                <option value="PRIVATE">🔒 Private</option>
+              </select>
+            </div>
 
-            <form @submit.prevent="createPost" class="space-y-6">
-              <!-- Title -->
-              <div>
-                <label class="block text-sm font-medium mb-2 text-emerald-500">
-                  Title
-                </label>
-                <input
-                  v-model="postTitle"
-                  type="text"
-                  placeholder="Enter post title..."
-                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
-                />
-              </div>
+            <!-- Group (Optional) -->
+            <div>
+              <label class="block text-sm font-medium mb-2 text-emerald-500">
+                Group (Optional)
+              </label>
+              <select
+                v-model="selectedGroupId"
+                :disabled="isLoadingAvailableGroups"
+                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
+              >
+                <option value="">📝 None (Personal post)</option>
+                <option v-for="group in availableGroups" :key="group.id" :value="group.id">
+                  👫 {{ group.name }}
+                </option>
+              </select>
+            </div>
 
-              <!-- Body -->
-              <div>
-                <label class="block text-sm font-medium mb-2 text-emerald-500">
-                  Body
-                </label>
-                <textarea
-                  v-model="postBody"
-                  rows="8"
-                  placeholder="Write your post content..."
-                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400 resize-vertical"
-                ></textarea>
-              </div>
-
-              <!-- Visibility -->
-              <div>
-                <label class="block text-sm font-medium mb-2 text-emerald-500">
-                  Visibility
-                </label>
-                <select
-                  v-model="postVisibility"
-                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
-                >
-                  <option value="PUBLIC">🌍 Public</option>
-                  <option value="PRIVATE">🔒 Private</option>
-                </select>
-              </div>
-
-              <!-- Group (Optional) -->
-              <div>
-                <label class="block text-sm font-medium mb-2 text-emerald-500">
-                  Group (Optional)
-                </label>
-                <select
-                  v-model="selectedGroupId"
-                  :disabled="isLoadingAvailableGroups"
-                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
-                >
-                  <option value="">📝 None (Personal post)</option>
-                  <option v-for="group in availableGroups" :key="group.id" :value="group.id">
-                    👫 {{ group.name }}
-                  </option>
-                </select>
-              </div>
-
-              <!-- Action Buttons -->
-              <div class="flex gap-4 pt-4">
-                <button
-                  type="submit"
-                  :disabled="isLoading"
-                  class="flex-1 px-6 py-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span v-if="!isLoading">📤 Create Post</span>
-                  <span v-else>Creating...</span>
-                </button>
-                <button
-                  type="button"
-                  @click="postTitle = ''; postBody = ''; postVisibility = 'PUBLIC'; selectedGroupId = ''"
-                  class="px-6 py-4 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all font-medium"
-                >
-                  Clear
-                </button>
-              </div>
-            </form>
-          </div>
+            <template #actions>
+              <button
+                type="submit"
+                :disabled="isLoading"
+                class="flex-1 px-6 py-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span v-if="!isLoading">📤 Create Post</span>
+                <span v-else>Creating...</span>
+              </button>
+              <button
+                type="button"
+                @click="postTitle = ''; postBody = ''; postVisibility = 'PUBLIC'; selectedGroupId = ''"
+                class="px-6 py-4 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all font-medium"
+              >
+                Clear
+              </button>
+            </template>
+          </FormCard>
 
           <!-- Create Group Card -->
-          <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-8 shadow-lg hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300"
+          <FormCard
+            title="Create Group"
+            icon="👫"
+            description="Start a new community group"
+            :success-message="groupSuccessMessage"
+            :error-message="groupErrorMessage"
+            @submit="createGroup"
           >
-            <div class="mb-6">
-              <h2 class="text-2xl font-bold text-emerald-500 mb-2 flex items-center gap-2">
-                <span class="text-3xl">👫</span>
-                Create Group
-              </h2>
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                Start a new community group
-              </p>
+            <!-- Group Name -->
+            <div>
+              <label class="block text-sm font-medium mb-2 text-emerald-500">
+                Group Name
+              </label>
+              <input
+                v-model="groupName"
+                type="text"
+                placeholder="Enter group name..."
+                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
+              />
             </div>
 
-            <!-- Success/Error Messages -->
-            <div v-if="groupSuccessMessage" class="mb-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-start gap-3">
-              <span class="text-xl">✓</span>
-              <span>{{ groupSuccessMessage }}</span>
-            </div>
-
-            <ErrorDisplayComponent :message="groupErrorMessage" class="mb-6" />
-
-            <form @submit.prevent="createGroup" class="space-y-6">
-              <!-- Group Name -->
-              <div>
-                <label class="block text-sm font-medium mb-2 text-emerald-500">
-                  Group Name
-                </label>
-                <input
-                  v-model="groupName"
-                  type="text"
-                  placeholder="Enter group name..."
-                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
-                />
-              </div>
-
-              <!-- Action Buttons -->
-              <div class="flex gap-4 pt-4">
-                <button
-                  type="submit"
-                  :disabled="isLoadingGroup"
-                  class="flex-1 px-6 py-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span v-if="!isLoadingGroup">👫 Create Group</span>
-                  <span v-else>Creating...</span>
-                </button>
-                <button
-                  type="button"
-                  @click="groupName = ''"
-                  class="px-6 py-4 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all font-medium"
-                >
-                  Clear
-                </button>
-              </div>
-            </form>
-          </div>
+            <template #actions>
+              <button
+                type="submit"
+                :disabled="isLoadingGroup"
+                class="flex-1 px-6 py-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span v-if="!isLoadingGroup">👫 Create Group</span>
+                <span v-else>Creating...</span>
+              </button>
+              <button
+                type="button"
+                @click="groupName = ''"
+                class="px-6 py-4 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all font-medium"
+              >
+                Clear
+              </button>
+            </template>
+          </FormCard>
 
           <!-- My Posts Section -->
           <div class="mt-12">
-            <h2 class="text-3xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
-              <span class="text-4xl">📋</span>
-              My Posts
-            </h2>
+            <SectionHeader icon="📋" title="My Posts" />
 
             <!-- Loading State -->
-            <div v-if="isLoadingPosts" class="text-center py-12">
-              <p class="text-gray-600 dark:text-gray-400">Loading your posts...</p>
-            </div>
+            <LoadingState v-if="isLoadingPosts" message="Loading your posts..." />
 
             <!-- Error State -->
-            <ErrorDisplayComponent :message="postsErrorMessage" class="mb-6" />
+            <ErrorDisplayComponent v-if="postsErrorMessage" :message="postsErrorMessage" class="mb-6" />
 
             <!-- Empty State -->
-            <div v-if="!isLoadingPosts && !postsErrorMessage && userPosts.length === 0" 
-              class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-12 text-center shadow-lg">
-              <span class="text-6xl mb-4 block">📝</span>
-              <p class="text-xl text-gray-600 dark:text-gray-400 mb-2">No posts yet</p>
-              <p class="text-sm text-gray-500 dark:text-gray-500">Create your first post above to get started!</p>
-            </div>
+            <EmptyState
+              v-if="!isLoadingPosts && !postsErrorMessage && userPosts.length === 0"
+              icon="📝"
+              title="No posts yet"
+              description="Create your first post above to get started!"
+            />
 
             <!-- Post Action Messages -->
-            <div v-if="postActionSuccess" class="mb-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-start gap-3">
-              <span class="text-xl">✓</span>
-              <span>{{ postActionSuccess }}</span>
-            </div>
-            <ErrorDisplayComponent :message="postActionError" class="mb-6" />
+            <SuccessMessage v-if="postActionSuccess" :message="postActionSuccess" class="mb-6" />
+            <ErrorDisplayComponent v-if="postActionError" :message="postActionError" class="mb-6" />
 
             <!-- Posts List -->
             <div v-if="!isLoadingPosts && userPosts.length > 0" class="space-y-6">
               <div v-for="post in userPosts" :key="post.id">
                 <!-- Edit Mode -->
-                <div v-if="editingPostId === post.id" class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
-                  <h3 class="text-lg font-bold text-emerald-500 mb-4">Edit Post</h3>
-                  <form @submit.prevent="handleUpdatePost(post.id)" class="space-y-4">
-                    <!-- Title -->
-                    <div>
-                      <label class="block text-sm font-medium mb-2 text-emerald-500">
-                        Title
-                      </label>
-                      <input
-                        v-model="editPostTitle"
-                        type="text"
-                        placeholder="Enter post title..."
-                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
-                      />
-                    </div>
-
-                    <!-- Body -->
-                    <div>
-                      <label class="block text-sm font-medium mb-2 text-emerald-500">
-                        Body
-                      </label>
-                      <textarea
-                        v-model="editPostBody"
-                        rows="6"
-                        placeholder="Write your post content..."
-                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all resize-vertical"
-                      ></textarea>
-                    </div>
-
-                    <!-- Visibility -->
-                    <div>
-                      <label class="block text-sm font-medium mb-2 text-emerald-500">
-                        Visibility
-                      </label>
-                      <select
-                        v-model="editPostVisibility"
-                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
-                      >
-                        <option value="PUBLIC">🌍 Public</option>
-                        <option value="PRIVATE">🔒 Private</option>
-                      </select>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="flex gap-3 pt-2">
-                      <button
-                        type="submit"
-                        :disabled="isUpdatingPost"
-                        class="flex-1 px-4 py-3 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all disabled:opacity-50"
-                      >
-                        <span v-if="!isUpdatingPost">💾 Save Changes</span>
-                        <span v-else>Saving...</span>
-                      </button>
-                      <button
-                        type="button"
-                        @click="cancelEditPost"
-                        class="px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 transition-all font-medium"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                </div>
+                <PostEditForm
+                  v-if="editingPostId === post.id"
+                  :post-id="post.id"
+                  :initial-title="editPostTitle"
+                  :initial-body="editPostBody"
+                  :initial-visibility="editPostVisibility"
+                  :is-updating="isUpdatingPost"
+                  variant="desktop"
+                  @update="handleUpdatePost"
+                  @cancel="cancelEditPost"
+                />
 
                 <!-- View Mode -->
-                <div v-else class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
-                  <PostPreviewCard
-                    :post="post"
-                    variant="main"
-                  />
-                  
-                  <!-- Action Buttons -->
-                  <div class="flex gap-2 mt-4">
-                    <button
-                      @click="startEditPost(post)"
-                      class="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 active:scale-95 transition-all"
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button
-                      @click="handleDeletePost(post.id)"
-                      :disabled="isDeletingPostId === post.id"
-                      class="px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 active:scale-95 transition-all disabled:opacity-50"
-                    >
-                      <span v-if="isDeletingPostId === post.id">Deleting...</span>
-                      <span v-else>🗑️ Delete</span>
-                    </button>
-                  </div>
-                </div>
+                <PostActionsCard
+                  v-else
+                  :post="post"
+                  variant="main"
+                  :available-groups="availableGroups"
+                  :current-group-id="getCurrentGroupForPost(post.id)"
+                  :current-group-name="getCurrentGroupNameForPost(post.id)"
+                  :is-loading-group-posts="isLoadingGroupPosts"
+                  :is-changing-group="changingGroupForPostId === post.id"
+                  :is-changing-group-in-progress="isChangingPostGroup"
+                  :is-deleting-post="isDeletingPostId === post.id"
+                  :selected-group-id="newGroupIdForPost"
+                  @edit="startEditPost(post)"
+                  @delete="handleDeletePost(post.id)"
+                  @change-group="startChangeGroup(post.id)"
+                  @save-group-change="handleChangePostGroup(post.id)"
+                  @cancel-group-change="cancelChangeGroup"
+                  @update:selected-group-id="newGroupIdForPost = $event"
+                />
               </div>
             </div>
           </div>
 
           <!-- My Groups Section -->
           <div class="mt-12">
-            <h2 class="text-3xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
-              <span class="text-4xl">👫</span>
-              My Groups
-            </h2>
+            <SectionHeader icon="👫" title="My Groups" />
 
             <!-- Loading State -->
-            <div v-if="isLoadingGroups" class="text-center py-12">
-              <p class="text-gray-600 dark:text-gray-400">Loading your groups...</p>
-            </div>
+            <LoadingState v-if="isLoadingGroups" message="Loading your groups..." />
 
             <!-- Error State -->
-            <ErrorDisplayComponent :message="groupsErrorMessage" class="mb-6" />
+            <ErrorDisplayComponent v-if="groupsErrorMessage" :message="groupsErrorMessage" class="mb-6" />
 
             <!-- Member Management Messages (Admin only) -->
             <div v-if="isAdmin">
-              <div v-if="memberSuccessMessage" class="mb-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-start gap-3">
-                <span class="text-xl">✓</span>
-                <span>{{ memberSuccessMessage }}</span>
-              </div>
-              <ErrorDisplayComponent :message="memberErrorMessage" class="mb-6" />
+              <SuccessMessage v-if="memberSuccessMessage" :message="memberSuccessMessage" class="mb-6" />
+              <ErrorDisplayComponent v-if="memberErrorMessage" :message="memberErrorMessage" class="mb-6" />
             </div>
 
             <!-- Empty State -->
-            <div v-if="!isLoadingGroups && !groupsErrorMessage && userGroups.length === 0" 
-              class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-12 text-center shadow-lg">
-              <span class="text-6xl mb-4 block">👫</span>
-              <p class="text-xl text-gray-600 dark:text-gray-400 mb-2">No groups yet</p>
-              <p class="text-sm text-gray-500 dark:text-gray-500">Create your first group above to get started!</p>
-            </div>
+            <EmptyState
+              v-if="!isLoadingGroups && !groupsErrorMessage && userGroups.length === 0"
+              icon="👫"
+              title="No groups yet"
+              description="Create your first group above to get started!"
+            />
 
             <!-- Groups List -->
             <div v-if="!isLoadingGroups && userGroups.length > 0" class="space-y-6">
@@ -899,55 +919,38 @@ const handleDeletePost = async (postId) => {
                 />
                 
                 <!-- Add Member UI (Admin only) -->
-                <div v-if="isAdmin" class="mt-4 pt-4 border-t-2 border-gray-200 dark:border-gray-700">
-                  <div class="flex items-center gap-3">
-                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Add Member:</span>
-                    <select
-                      v-model="selectedUserIds[group.id]"
-                      class="flex-1 px-3 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 transition-all text-sm"
-                      :disabled="isLoadingUsers || addingMemberToGroupId === group.id"
-                    >
-                      <option value="">Select a user...</option>
-                      <option v-for="user in allUsers" :key="user.id" :value="user.id">
-                        {{ user.username }} ({{ user.email }})
-                      </option>
-                    </select>
-                    <button
-                      @click="handleAddMember(group.id)"
-                      :disabled="!selectedUserIds[group.id] || addingMemberToGroupId === group.id"
-                      class="px-4 py-2 rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 active:scale-95 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm"
-                    >
-                      <span v-if="addingMemberToGroupId === group.id">Adding...</span>
-                      <span v-else>➕ Add</span>
-                    </button>
-                  </div>
-                </div>
+                <AddMemberSection
+                  v-if="isAdmin"
+                  :group-id="group.id"
+                  :all-users="allUsers"
+                  :is-loading-users="isLoadingUsers"
+                  :is-adding="addingMemberToGroupId === group.id"
+                  :model-value="selectedUserIds[group.id]"
+                  variant="desktop"
+                  @update:model-value="selectedUserIds[group.id] = $event"
+                  @add-member="handleAddMember(group.id)"
+                />
               </div>
             </div>
           </div>
 
           <!-- My Memberships Section -->
           <div class="mt-12">
-            <h2 class="text-3xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
-              <span class="text-4xl">👥</span>
-              My Memberships
-            </h2>
+            <SectionHeader icon="👥" title="My Memberships" />
 
             <!-- Loading State -->
-            <div v-if="isLoadingUserMemberships" class="text-center py-12">
-              <p class="text-gray-600 dark:text-gray-400">Loading your memberships...</p>
-            </div>
+            <LoadingState v-if="isLoadingUserMemberships" message="Loading your memberships..." />
 
             <!-- Error State -->
-            <ErrorDisplayComponent :message="userMembershipsErrorMessage" class="mb-6" />
+            <ErrorDisplayComponent v-if="userMembershipsErrorMessage" :message="userMembershipsErrorMessage" class="mb-6" />
 
             <!-- Empty State -->
-            <div v-if="!isLoadingUserMemberships && !userMembershipsErrorMessage && userGroupMemberships.length === 0" 
-              class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-12 text-center shadow-lg">
-              <span class="text-6xl mb-4 block">👥</span>
-              <p class="text-xl text-gray-600 dark:text-gray-400 mb-2">No memberships yet</p>
-              <p class="text-sm text-gray-500 dark:text-gray-500">Join or create a group to get started!</p>
-            </div>
+            <EmptyState
+              v-if="!isLoadingUserMemberships && !userMembershipsErrorMessage && userGroupMemberships.length === 0"
+              icon="👥"
+              title="No memberships yet"
+              description="Join or create a group to get started!"
+            />
 
             <!-- Memberships List -->
             <div v-if="!isLoadingUserMemberships && userGroupMemberships.length > 0" class="space-y-6">
@@ -966,26 +969,21 @@ const handleDeletePost = async (postId) => {
 
           <!-- Group Memberships Overview (Admin only) -->
           <div v-if="isAdmin" class="mt-12">
-            <h2 class="text-3xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
-              <span class="text-4xl">🛡️</span>
-              Group Memberships Overview
-            </h2>
+            <SectionHeader icon="🛡️" title="Group Memberships Overview" />
 
             <!-- Loading State -->
-            <div v-if="isLoadingMemberships" class="text-center py-12">
-              <p class="text-gray-600 dark:text-gray-400">Loading memberships...</p>
-            </div>
+            <LoadingState v-if="isLoadingMemberships" message="Loading memberships..." />
 
             <!-- Error State -->
-            <ErrorDisplayComponent :message="membershipsErrorMessage" class="mb-6" />
+            <ErrorDisplayComponent v-if="membershipsErrorMessage" :message="membershipsErrorMessage" class="mb-6" />
 
             <!-- Empty State -->
-            <div v-if="!isLoadingMemberships && !membershipsErrorMessage && groupMemberships.length === 0" 
-              class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-12 text-center shadow-lg">
-              <span class="text-6xl mb-4 block">📊</span>
-              <p class="text-xl text-gray-600 dark:text-gray-400 mb-2">No memberships yet</p>
-              <p class="text-sm text-gray-500 dark:text-gray-500">Add members to groups to see them here</p>
-            </div>
+            <EmptyState
+              v-if="!isLoadingMemberships && !membershipsErrorMessage && groupMemberships.length === 0"
+              icon="📊"
+              title="No memberships yet"
+              description="Add members to groups to see them here"
+            />
 
             <!-- Memberships Table -->
             <div v-if="!isLoadingMemberships && groupMemberships.length > 0" 
@@ -1035,315 +1033,227 @@ const handleDeletePost = async (postId) => {
 
       <div class="space-y-6">
         <!-- Create Post Card -->
-        <div
-          class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg"
+        <FormCard
+          title="Create Post"
+          icon="✍️"
+          :success-message="successMessage"
+          :error-message="errorMessage"
+          icon-size="text-2xl"
+          title-size="text-xl"
+          description-size="text-sm"
+          variant="mobile"
+          @submit="createPost"
         >
-          <div class="mb-6">
-            <h2 class="text-xl font-bold text-emerald-500 mb-2 flex items-center gap-2">
-              <span class="text-2xl">✍️</span>
-              Create Post
-            </h2>
+          <!-- Title -->
+          <div>
+            <label class="block text-sm font-medium mb-2 text-emerald-500">
+              Title
+            </label>
+            <input
+              v-model="postTitle"
+              type="text"
+              placeholder="Enter post title..."
+              class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+            />
           </div>
 
-          <!-- Success/Error Messages -->
-          <div v-if="successMessage" class="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-start gap-2 text-sm">
-            <span>✓</span>
-            <span>{{ successMessage }}</span>
+          <!-- Body -->
+          <div>
+            <label class="block text-sm font-medium mb-2 text-emerald-500">
+              Body
+            </label>
+            <textarea
+              v-model="postBody"
+              rows="6"
+              placeholder="Write your post content..."
+              class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all resize-vertical"
+            ></textarea>
           </div>
 
-          <ErrorDisplayComponent :message="errorMessage" class="mb-4" />
+          <!-- Visibility -->
+          <div>
+            <label class="block text-sm font-medium mb-2 text-emerald-500">
+              Visibility
+            </label>
+            <select
+              v-model="postVisibility"
+              class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+            >
+              <option value="PUBLIC">🌍 Public</option>
+              <option value="PRIVATE">🔒 Private</option>
+            </select>
+          </div>
 
-          <form @submit.prevent="createPost" class="space-y-4">
-            <!-- Title -->
-            <div>
-              <label class="block text-sm font-medium mb-2 text-emerald-500">
-                Title
-              </label>
-              <input
-                v-model="postTitle"
-                type="text"
-                placeholder="Enter post title..."
-                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
-              />
-            </div>
+          <!-- Group (Optional) -->
+          <div>
+            <label class="block text-sm font-medium mb-2 text-emerald-500">
+              Group (Optional)
+            </label>
+            <select
+              v-model="selectedGroupId"
+              :disabled="isLoadingAvailableGroups"
+              class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+            >
+              <option value="">📝 None (Personal post)</option>
+              <option v-for="group in availableGroups" :key="group.id" :value="group.id">
+                👫 {{ group.name }}
+              </option>
+            </select>
+          </div>
 
-            <!-- Body -->
-            <div>
-              <label class="block text-sm font-medium mb-2 text-emerald-500">
-                Body
-              </label>
-              <textarea
-                v-model="postBody"
-                rows="6"
-                placeholder="Write your post content..."
-                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all resize-vertical"
-              ></textarea>
-            </div>
-
-            <!-- Visibility -->
-            <div>
-              <label class="block text-sm font-medium mb-2 text-emerald-500">
-                Visibility
-              </label>
-              <select
-                v-model="postVisibility"
-                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
-              >
-                <option value="PUBLIC">🌍 Public</option>
-                <option value="PRIVATE">🔒 Private</option>
-              </select>
-            </div>
-
-            <!-- Group (Optional) -->
-            <div>
-              <label class="block text-sm font-medium mb-2 text-emerald-500">
-                Group (Optional)
-              </label>
-              <select
-                v-model="selectedGroupId"
-                :disabled="isLoadingAvailableGroups"
-                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
-              >
-                <option value="">📝 None (Personal post)</option>
-                <option v-for="group in availableGroups" :key="group.id" :value="group.id">
-                  👫 {{ group.name }}
-                </option>
-              </select>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex flex-col gap-3 pt-2">
-              <button
-                type="submit"
-                :disabled="isLoading"
-                class="w-full px-6 py-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-50"
-              >
-                <span v-if="!isLoading">📤 Create Post</span>
-                <span v-else>Creating...</span>
-              </button>
-              <button
-                type="button"
-                @click="postTitle = ''; postBody = ''; postVisibility = 'PUBLIC'; selectedGroupId = ''"
-                class="w-full px-6 py-4 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 transition-all font-medium"
-              >
-                Clear
-              </button>
-            </div>
-          </form>
-        </div>
+          <template #actions>
+            <button
+              type="submit"
+              :disabled="isLoading"
+              class="w-full px-6 py-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-50"
+            >
+              <span v-if="!isLoading">📤 Create Post</span>
+              <span v-else>Creating...</span>
+            </button>
+            <button
+              type="button"
+              @click="postTitle = ''; postBody = ''; postVisibility = 'PUBLIC'; selectedGroupId = ''"
+              class="w-full px-6 py-4 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 transition-all font-medium"
+            >
+              Clear
+            </button>
+          </template>
+        </FormCard>
 
         <!-- Create Group Card -->
-        <div
-          class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg"
+        <FormCard
+          title="Create Group"
+          icon="👫"
+          :success-message="groupSuccessMessage"
+          :error-message="groupErrorMessage"
+          icon-size="text-2xl"
+          title-size="text-xl"
+          description-size="text-sm"
+          variant="mobile"
+          @submit="createGroup"
         >
-          <div class="mb-6">
-            <h2 class="text-xl font-bold text-emerald-500 mb-2 flex items-center gap-2">
-              <span class="text-2xl">👫</span>
-              Create Group
-            </h2>
+          <!-- Group Name -->
+          <div>
+            <label class="block text-sm font-medium mb-2 text-emerald-500">
+              Group Name
+            </label>
+            <input
+              v-model="groupName"
+              type="text"
+              placeholder="Enter group name..."
+              class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+            />
           </div>
 
-          <!-- Success/Error Messages -->
-          <div v-if="groupSuccessMessage" class="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-start gap-2 text-sm">
-            <span>✓</span>
-            <span>{{ groupSuccessMessage }}</span>
-          </div>
-
-          <ErrorDisplayComponent :message="groupErrorMessage" class="mb-4" />
-
-          <form @submit.prevent="createGroup" class="space-y-4">
-            <!-- Group Name -->
-            <div>
-              <label class="block text-sm font-medium mb-2 text-emerald-500">
-                Group Name
-              </label>
-              <input
-                v-model="groupName"
-                type="text"
-                placeholder="Enter group name..."
-                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
-              />
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex flex-col gap-3 pt-2">
-              <button
-                type="submit"
-                :disabled="isLoadingGroup"
-                class="w-full px-6 py-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-50"
-              >
-                <span v-if="!isLoadingGroup">👫 Create Group</span>
-                <span v-else>Creating...</span>
-              </button>
-              <button
-                type="button"
-                @click="groupName = ''"
-                class="w-full px-6 py-4 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 transition-all font-medium"
-              >
-                Clear
-              </button>
-            </div>
-          </form>
-        </div>
+          <template #actions>
+            <button
+              type="submit"
+              :disabled="isLoadingGroup"
+              class="w-full px-6 py-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-50"
+            >
+              <span v-if="!isLoadingGroup">👫 Create Group</span>
+              <span v-else>Creating...</span>
+            </button>
+            <button
+              type="button"
+              @click="groupName = ''"
+              class="w-full px-6 py-4 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 transition-all font-medium"
+            >
+              Clear
+            </button>
+          </template>
+        </FormCard>
 
         <!-- My Posts Section -->
         <div class="mt-12">
-          <h2 class="text-2xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
-            <span class="text-3xl">📋</span>
-            My Posts
-          </h2>
+          <SectionHeader icon="📋" title="My Posts" icon-size="text-3xl" title-size="text-2xl" />
 
           <!-- Loading State -->
-          <div v-if="isLoadingPosts" class="text-center py-8">
-            <p class="text-gray-600 dark:text-gray-400">Loading your posts...</p>
-          </div>
+          <LoadingState v-if="isLoadingPosts" message="Loading your posts..." />
 
           <!-- Error State -->
-          <ErrorDisplayComponent :message="postsErrorMessage" class="mb-4" />
+          <ErrorDisplayComponent v-if="postsErrorMessage" :message="postsErrorMessage" class="mb-4" />
 
           <!-- Post Action Messages -->
-          <div v-if="postActionSuccess" class="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-start gap-2 text-sm">
-            <span>✓</span>
-            <span>{{ postActionSuccess }}</span>
-          </div>
-          <ErrorDisplayComponent :message="postActionError" class="mb-4" />
+          <SuccessMessage v-if="postActionSuccess" :message="postActionSuccess" class="mb-4" />
+          <ErrorDisplayComponent v-if="postActionError" :message="postActionError" class="mb-4" />
 
           <!-- Empty State -->
-          <div v-if="!isLoadingPosts && !postsErrorMessage && userPosts.length === 0" 
-            class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-8 text-center shadow-lg">
-            <span class="text-5xl mb-3 block">📝</span>
-            <p class="text-lg text-gray-600 dark:text-gray-400 mb-2">No posts yet</p>
-            <p class="text-sm text-gray-500 dark:text-gray-500">Create your first post above to get started!</p>
-          </div>
+          <EmptyState
+            v-if="!isLoadingPosts && !postsErrorMessage && userPosts.length === 0"
+            icon="📝"
+            title="No posts yet"
+            description="Create your first post above to get started!"
+            icon-size="text-5xl"
+            title-size="text-lg"
+          />
 
           <!-- Posts List -->
           <div v-if="!isLoadingPosts && userPosts.length > 0" class="space-y-6">
             <div v-for="post in userPosts" :key="post.id">
               <!-- Edit Mode -->
-              <div v-if="editingPostId === post.id" class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
-                <h3 class="text-base font-bold text-emerald-500 mb-4">Edit Post</h3>
-                <form @submit.prevent="handleUpdatePost(post.id)" class="space-y-4">
-                  <!-- Title -->
-                  <div>
-                    <label class="block text-sm font-medium mb-2 text-emerald-500">
-                      Title
-                    </label>
-                    <input
-                      v-model="editPostTitle"
-                      type="text"
-                      placeholder="Enter post title..."
-                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
-                    />
-                  </div>
-
-                  <!-- Body -->
-                  <div>
-                    <label class="block text-sm font-medium mb-2 text-emerald-500">
-                      Body
-                    </label>
-                    <textarea
-                      v-model="editPostBody"
-                      rows="5"
-                      placeholder="Write your post content..."
-                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all resize-vertical"
-                    ></textarea>
-                  </div>
-
-                  <!-- Visibility -->
-                  <div>
-                    <label class="block text-sm font-medium mb-2 text-emerald-500">
-                      Visibility
-                    </label>
-                    <select
-                      v-model="editPostVisibility"
-                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
-                    >
-                      <option value="PUBLIC">🌍 Public</option>
-                      <option value="PRIVATE">🔒 Private</option>
-                    </select>
-                  </div>
-
-                  <!-- Action Buttons -->
-                  <div class="flex flex-col gap-2 pt-2">
-                    <button
-                      type="submit"
-                      :disabled="isUpdatingPost"
-                      class="w-full px-4 py-3 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all disabled:opacity-50 text-sm"
-                    >
-                      <span v-if="!isUpdatingPost">💾 Save Changes</span>
-                      <span v-else>Saving...</span>
-                    </button>
-                    <button
-                      type="button"
-                      @click="cancelEditPost"
-                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 transition-all font-medium text-sm"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
+              <PostEditForm
+                v-if="editingPostId === post.id"
+                :post-id="post.id"
+                :initial-title="editPostTitle"
+                :initial-body="editPostBody"
+                :initial-visibility="editPostVisibility"
+                :is-updating="isUpdatingPost"
+                variant="mobile"
+                @update="handleUpdatePost"
+                @cancel="cancelEditPost"
+              />
 
               <!-- View Mode -->
-              <div v-else class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
-                <PostPreviewCard
-                  :post="post"
-                  variant="mobile"
-                />
-                
-                <!-- Action Buttons -->
-                <div class="flex gap-2 mt-4">
-                  <button
-                    @click="startEditPost(post)"
-                    class="flex-1 px-3 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 active:scale-95 transition-all"
-                  >
-                    ✏️ Edit
-                  </button>
-                  <button
-                    @click="handleDeletePost(post.id)"
-                    :disabled="isDeletingPostId === post.id"
-                    class="flex-1 px-3 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 active:scale-95 transition-all disabled:opacity-50"
-                  >
-                    <span v-if="isDeletingPostId === post.id">Deleting...</span>
-                    <span v-else>🗑️ Delete</span>
-                  </button>
-                </div>
-              </div>
+              <PostActionsCard
+                v-else
+                :post="post"
+                variant="mobile"
+                :available-groups="availableGroups"
+                :current-group-id="getCurrentGroupForPost(post.id)"
+                :current-group-name="getCurrentGroupNameForPost(post.id)"
+                :is-loading-group-posts="isLoadingGroupPosts"
+                :is-changing-group="changingGroupForPostId === post.id"
+                :is-changing-group-in-progress="isChangingPostGroup"
+                :is-deleting-post="isDeletingPostId === post.id"
+                :selected-group-id="newGroupIdForPost"
+                :show-group-change="changingGroupForPostId === post.id"
+                @edit="startEditPost(post)"
+                @delete="handleDeletePost(post.id)"
+                @change-group="startChangeGroup(post.id)"
+                @save-group-change="handleChangePostGroup(post.id)"
+                @cancel-group-change="cancelChangeGroup"
+                @update:selected-group-id="newGroupIdForPost = $event"
+              />
             </div>
           </div>
         </div>
 
         <!-- My Groups Section -->
         <div class="mt-12">
-          <h2 class="text-2xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
-            <span class="text-3xl">👫</span>
-            My Groups
-          </h2>
+          <SectionHeader icon="👫" title="My Groups" icon-size="text-3xl" title-size="text-2xl" />
 
           <!-- Loading State -->
-          <div v-if="isLoadingGroups" class="text-center py-8">
-            <p class="text-gray-600 dark:text-gray-400">Loading your groups...</p>
-          </div>
+          <LoadingState v-if="isLoadingGroups" message="Loading your groups..." />
 
           <!-- Error State -->
-          <ErrorDisplayComponent :message="groupsErrorMessage" class="mb-4" />
+          <ErrorDisplayComponent v-if="groupsErrorMessage" :message="groupsErrorMessage" class="mb-4" />
 
           <!-- Member Management Messages (Admin only) -->
           <div v-if="isAdmin">
-            <div v-if="memberSuccessMessage" class="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-start gap-2 text-sm">
-              <span>✓</span>
-              <span>{{ memberSuccessMessage }}</span>
-            </div>
-            <ErrorDisplayComponent :message="memberErrorMessage" class="mb-4" />
+            <SuccessMessage v-if="memberSuccessMessage" :message="memberSuccessMessage" class="mb-4" />
+            <ErrorDisplayComponent v-if="memberErrorMessage" :message="memberErrorMessage" class="mb-4" />
           </div>
 
           <!-- Empty State -->
-          <div v-if="!isLoadingGroups && !groupsErrorMessage && userGroups.length === 0" 
-            class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-8 text-center shadow-lg">
-            <span class="text-5xl mb-3 block">👫</span>
-            <p class="text-lg text-gray-600 dark:text-gray-400 mb-2">No groups yet</p>
-            <p class="text-sm text-gray-500 dark:text-gray-500">Create your first group above to get started!</p>
-          </div>
+          <EmptyState
+            v-if="!isLoadingGroups && !groupsErrorMessage && userGroups.length === 0"
+            icon="👫"
+            title="No groups yet"
+            description="Create your first group above to get started!"
+            icon-size="text-5xl"
+            title-size="text-lg"
+          />
 
           <!-- Groups List -->
           <div v-if="!isLoadingGroups && userGroups.length > 0" class="space-y-6">
@@ -1354,55 +1264,40 @@ const handleDeletePost = async (postId) => {
               />
               
               <!-- Add Member UI (Admin only) -->
-              <div v-if="isAdmin" class="mt-4 pt-4 border-t-2 border-gray-200 dark:border-gray-700">
-                <div class="space-y-3">
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Add Member:</label>
-                  <select
-                    v-model="selectedUserIds[group.id]"
-                    class="w-full px-3 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 transition-all text-sm"
-                    :disabled="isLoadingUsers || addingMemberToGroupId === group.id"
-                  >
-                    <option value="">Select a user...</option>
-                    <option v-for="user in allUsers" :key="user.id" :value="user.id">
-                      {{ user.username }} ({{ user.email }})
-                    </option>
-                  </select>
-                  <button
-                    @click="handleAddMember(group.id)"
-                    :disabled="!selectedUserIds[group.id] || addingMemberToGroupId === group.id"
-                    class="w-full px-4 py-3 rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 active:scale-95 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                  >
-                    <span v-if="addingMemberToGroupId === group.id">Adding...</span>
-                    <span v-else>➕ Add Member</span>
-                  </button>
-                </div>
-              </div>
+              <AddMemberSection
+                v-if="isAdmin"
+                :group-id="group.id"
+                :all-users="allUsers"
+                :is-loading-users="isLoadingUsers"
+                :is-adding="addingMemberToGroupId === group.id"
+                :model-value="selectedUserIds[group.id]"
+                variant="mobile"
+                @update:model-value="selectedUserIds[group.id] = $event"
+                @add-member="handleAddMember(group.id)"
+              />
             </div>
           </div>
         </div>
 
         <!-- My Memberships Section -->
         <div class="mt-12">
-          <h2 class="text-2xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
-            <span class="text-3xl">👥</span>
-            My Memberships
-          </h2>
+          <SectionHeader icon="👥" title="My Memberships" icon-size="text-3xl" title-size="text-2xl" />
 
           <!-- Loading State -->
-          <div v-if="isLoadingUserMemberships" class="text-center py-8">
-            <p class="text-gray-600 dark:text-gray-400">Loading your memberships...</p>
-          </div>
+          <LoadingState v-if="isLoadingUserMemberships" message="Loading your memberships..." />
 
           <!-- Error State -->
-          <ErrorDisplayComponent :message="userMembershipsErrorMessage" class="mb-4" />
+          <ErrorDisplayComponent v-if="userMembershipsErrorMessage" :message="userMembershipsErrorMessage" class="mb-4" />
 
           <!-- Empty State -->
-          <div v-if="!isLoadingUserMemberships && !userMembershipsErrorMessage && userGroupMemberships.length === 0" 
-            class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-8 text-center shadow-lg">
-            <span class="text-5xl mb-3 block">👥</span>
-            <p class="text-lg text-gray-600 dark:text-gray-400 mb-2">No memberships yet</p>
-            <p class="text-sm text-gray-500 dark:text-gray-500">Join or create a group to get started!</p>
-          </div>
+          <EmptyState
+            v-if="!isLoadingUserMemberships && !userMembershipsErrorMessage && userGroupMemberships.length === 0"
+            icon="👥"
+            title="No memberships yet"
+            description="Join or create a group to get started!"
+            icon-size="text-5xl"
+            title-size="text-lg"
+          />
 
           <!-- Memberships List -->
           <div v-if="!isLoadingUserMemberships && userGroupMemberships.length > 0" class="space-y-6">
@@ -1421,26 +1316,23 @@ const handleDeletePost = async (postId) => {
 
         <!-- Group Memberships Overview (Admin only) -->
         <div v-if="isAdmin" class="mt-12">
-          <h2 class="text-2xl font-bold text-emerald-500 mb-6 flex items-center gap-2">
-            <span class="text-3xl">🛡️</span>
-            Group Memberships Overview
-          </h2>
+          <SectionHeader icon="🛡️" title="Group Memberships Overview" icon-size="text-3xl" title-size="text-2xl" />
 
           <!-- Loading State -->
-          <div v-if="isLoadingMemberships" class="text-center py-8">
-            <p class="text-gray-600 dark:text-gray-400">Loading memberships...</p>
-          </div>
+          <LoadingState v-if="isLoadingMemberships" message="Loading memberships..." />
 
           <!-- Error State -->
-          <ErrorDisplayComponent :message="membershipsErrorMessage" class="mb-4" />
+          <ErrorDisplayComponent v-if="membershipsErrorMessage" :message="membershipsErrorMessage" class="mb-4" />
 
           <!-- Empty State -->
-          <div v-if="!isLoadingMemberships && !membershipsErrorMessage && groupMemberships.length === 0" 
-            class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-8 text-center shadow-lg">
-            <span class="text-5xl mb-3 block">📊</span>
-            <p class="text-lg text-gray-600 dark:text-gray-400 mb-2">No memberships yet</p>
-            <p class="text-sm text-gray-500 dark:text-gray-500">Add members to groups to see them here</p>
-          </div>
+          <EmptyState
+            v-if="!isLoadingMemberships && !membershipsErrorMessage && groupMemberships.length === 0"
+            icon="📊"
+            title="No memberships yet"
+            description="Add members to groups to see them here"
+            icon-size="text-5xl"
+            title-size="text-lg"
+          />
 
           <!-- Memberships List (Card style for mobile) -->
           <div v-if="!isLoadingMemberships && groupMemberships.length > 0" class="space-y-3">
