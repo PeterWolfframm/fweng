@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { apiClient, updateUser } from '@/config/api'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -9,17 +10,31 @@ const router = useRouter()
 // Form data for profile information
 const email = ref('')
 const username = ref('')
+const password = ref('')
 
 // UI state
 const errorMessage = ref('')
 const successMessage = ref('')
 const isLoading = ref(false)
+const isFetchingUser = ref(true)
 
 // Load current user data
 onMounted(async () => {
   if (auth.isLoggedIn && auth.currentUser) {
-    username.value = auth.currentUser.username || ''
-    // In a real app, you'd fetch full user details from the backend
+    try {
+      isFetchingUser.value = true
+      const response = await apiClient.get('/users/me')
+      
+      if (response.data) {
+        username.value = response.data.username || ''
+        email.value = response.data.email || ''
+      }
+    } catch (error) {
+      console.error('Failed to fetch user details:', error)
+      errorMessage.value = 'Failed to load user profile'
+    } finally {
+      isFetchingUser.value = false
+    }
   }
 })
 
@@ -27,18 +42,55 @@ onMounted(async () => {
 const updateProfile = async () => {
   errorMessage.value = ''
   successMessage.value = ''
+  
+  // Validation
+  if (!username.value.trim() && !email.value.trim() && !password.value.trim()) {
+    errorMessage.value = 'Please enter at least one field to update'
+    return
+  }
+  
+  if (username.value.trim() && (username.value.trim().length < 4 || username.value.trim().length > 16)) {
+    errorMessage.value = 'Username must be between 4 and 16 characters'
+    return
+  }
+  
   isLoading.value = true
 
   try {
-    // Simulate API call - replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Build update data - only include fields that have values
+    const updateData = {}
+    if (username.value.trim()) updateData.username = username.value.trim()
+    if (email.value.trim()) updateData.email = email.value.trim()
+    if (password.value.trim()) updateData.password = password.value.trim()
+    
+    const response = await updateUser(auth.currentUser.id, updateData)
     
     successMessage.value = 'Profile updated successfully!'
+    
+    // Update auth store with new username if it was changed
+    if (response.data && response.data.username) {
+      await auth.fetchCurrentUser()
+    }
+    
+    // Clear password field for security
+    password.value = ''
+    
     setTimeout(() => {
       successMessage.value = ''
     }, 3000)
   } catch (error) {
-    errorMessage.value = error.message || 'Failed to update profile'
+    // Extract error message from API response
+    if (error.response?.data?.message) {
+      errorMessage.value = error.response.data.message
+    } else if (error.response?.status === 401) {
+      errorMessage.value = 'You must be logged in to update your profile'
+    } else if (error.response?.status === 403) {
+      errorMessage.value = 'You do not have permission to update this profile'
+    } else if (error.message) {
+      errorMessage.value = error.message
+    } else {
+      errorMessage.value = 'Failed to update profile. Please try again.'
+    }
   } finally {
     isLoading.value = false
   }
@@ -115,6 +167,22 @@ const handleLogout = () => {
                   placeholder="your.email@example.com"
                   class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
                 />
+              </div>
+
+              <!-- Password (optional) -->
+              <div>
+                <label class="block text-sm font-medium mb-2 text-emerald-500">
+                  New Password (optional)
+                </label>
+                <input
+                  v-model="password"
+                  type="password"
+                  placeholder="Leave blank to keep current password"
+                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
+                />
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Password must be 8-15 characters with uppercase, lowercase, number, and special character
+                </p>
               </div>
 
               <!-- Action Buttons -->
@@ -231,6 +299,22 @@ const handleLogout = () => {
                 placeholder="your.email@example.com"
                 class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
               />
+            </div>
+
+            <!-- Password (optional) -->
+            <div>
+              <label class="block text-sm font-medium mb-2 text-emerald-500">
+                New Password (optional)
+              </label>
+              <input
+                v-model="password"
+                type="password"
+                placeholder="Leave blank to keep current"
+                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+              />
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Must be 8-15 characters with uppercase, lowercase, number, and special character
+              </p>
             </div>
 
             <!-- Action Buttons -->

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { apiClient, fetchAllUsers, addGroupMember, fetchGroupMemberships, createGroup as createGroupApi } from '@/config/api'
+import { apiClient, fetchAllUsers, addGroupMember, fetchGroupMemberships, createGroup as createGroupApi, updatePost, deletePost } from '@/config/api'
 import ErrorDisplayComponent from '@/components/ErrorDisplayComponent.vue'
 import PostPreviewCard from '@/components/PostPreviewCard.vue'
 import GroupPreviewCard from '@/components/GroupPreviewCard.vue'
@@ -61,6 +61,16 @@ const membershipsErrorMessage = ref('')
 const userGroupMemberships = ref([])
 const isLoadingUserMemberships = ref(false)
 const userMembershipsErrorMessage = ref('')
+
+// Post edit/delete state
+const editingPostId = ref(null)
+const editPostTitle = ref('')
+const editPostBody = ref('')
+const editPostVisibility = ref('PUBLIC')
+const isUpdatingPost = ref(false)
+const isDeletingPostId = ref(null)
+const postActionError = ref('')
+const postActionSuccess = ref('')
 
 // Fetch user's posts
 const fetchUserPosts = async () => {
@@ -383,6 +393,129 @@ const createGroup = async () => {
     isLoadingGroup.value = false
   }
 }
+
+// Start editing a post
+const startEditPost = (post) => {
+  editingPostId.value = post.id
+  editPostTitle.value = post.title
+  editPostBody.value = post.content
+  editPostVisibility.value = post.visibility || 'PUBLIC'
+  postActionError.value = ''
+  postActionSuccess.value = ''
+}
+
+// Cancel editing
+const cancelEditPost = () => {
+  editingPostId.value = null
+  editPostTitle.value = ''
+  editPostBody.value = ''
+  editPostVisibility.value = 'PUBLIC'
+  postActionError.value = ''
+}
+
+// Update post
+const handleUpdatePost = async (postId) => {
+  postActionError.value = ''
+  postActionSuccess.value = ''
+  
+  // Validation
+  if (!editPostTitle.value.trim()) {
+    postActionError.value = 'Please enter a title'
+    return
+  }
+  
+  if (editPostTitle.value.trim().length < 3 || editPostTitle.value.trim().length > 30) {
+    postActionError.value = 'Title must be between 3 and 30 characters'
+    return
+  }
+  
+  if (!editPostBody.value.trim()) {
+    postActionError.value = 'Please enter post content'
+    return
+  }
+  
+  if (editPostBody.value.trim().length < 3 || editPostBody.value.trim().length > 100) {
+    postActionError.value = 'Body must be between 3 and 100 characters'
+    return
+  }
+  
+  isUpdatingPost.value = true
+
+  try {
+    await updatePost(postId, {
+      title: editPostTitle.value.trim(),
+      body: editPostBody.value.trim(),
+      visibility: editPostVisibility.value
+    })
+    
+    postActionSuccess.value = 'Post updated successfully!'
+    
+    // Clear edit mode
+    editingPostId.value = null
+    editPostTitle.value = ''
+    editPostBody.value = ''
+    editPostVisibility.value = 'PUBLIC'
+    
+    // Refresh posts list
+    await fetchUserPosts()
+    
+    setTimeout(() => {
+      postActionSuccess.value = ''
+    }, 3000)
+  } catch (error) {
+    if (error.response?.data?.message) {
+      postActionError.value = error.response.data.message
+    } else if (error.response?.status === 401) {
+      postActionError.value = 'You must be logged in to update posts'
+    } else if (error.response?.status === 403) {
+      postActionError.value = 'You can only update your own posts'
+    } else if (error.message) {
+      postActionError.value = error.message
+    } else {
+      postActionError.value = 'Failed to update post. Please try again.'
+    }
+  } finally {
+    isUpdatingPost.value = false
+  }
+}
+
+// Delete post
+const handleDeletePost = async (postId) => {
+  if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+    return
+  }
+  
+  postActionError.value = ''
+  postActionSuccess.value = ''
+  isDeletingPostId.value = postId
+
+  try {
+    await deletePost(postId)
+    
+    postActionSuccess.value = 'Post deleted successfully!'
+    
+    // Refresh posts list
+    await fetchUserPosts()
+    
+    setTimeout(() => {
+      postActionSuccess.value = ''
+    }, 3000)
+  } catch (error) {
+    if (error.response?.data?.message) {
+      postActionError.value = error.response.data.message
+    } else if (error.response?.status === 401) {
+      postActionError.value = 'You must be logged in to delete posts'
+    } else if (error.response?.status === 403) {
+      postActionError.value = 'You can only delete your own posts'
+    } else if (error.message) {
+      postActionError.value = error.message
+    } else {
+      postActionError.value = 'Failed to delete post. Please try again.'
+    }
+  } finally {
+    isDeletingPostId.value = null
+  }
+}
 </script>
 
 <template>
@@ -563,14 +696,107 @@ const createGroup = async () => {
               <p class="text-sm text-gray-500 dark:text-gray-500">Create your first post above to get started!</p>
             </div>
 
+            <!-- Post Action Messages -->
+            <div v-if="postActionSuccess" class="mb-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-start gap-3">
+              <span class="text-xl">✓</span>
+              <span>{{ postActionSuccess }}</span>
+            </div>
+            <ErrorDisplayComponent :message="postActionError" class="mb-6" />
+
             <!-- Posts List -->
             <div v-if="!isLoadingPosts && userPosts.length > 0" class="space-y-4">
-              <PostPreviewCard
-                v-for="post in userPosts"
-                :key="post.id"
-                :post="post"
-                variant="main"
-              />
+              <div v-for="post in userPosts" :key="post.id" class="space-y-3">
+                <!-- Edit Mode -->
+                <div v-if="editingPostId === post.id" class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
+                  <h3 class="text-lg font-bold text-emerald-500 mb-4">Edit Post</h3>
+                  <form @submit.prevent="handleUpdatePost(post.id)" class="space-y-4">
+                    <!-- Title -->
+                    <div>
+                      <label class="block text-sm font-medium mb-2 text-emerald-500">
+                        Title
+                      </label>
+                      <input
+                        v-model="editPostTitle"
+                        type="text"
+                        placeholder="Enter post title..."
+                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+                      />
+                    </div>
+
+                    <!-- Body -->
+                    <div>
+                      <label class="block text-sm font-medium mb-2 text-emerald-500">
+                        Body
+                      </label>
+                      <textarea
+                        v-model="editPostBody"
+                        rows="6"
+                        placeholder="Write your post content..."
+                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all resize-vertical"
+                      ></textarea>
+                    </div>
+
+                    <!-- Visibility -->
+                    <div>
+                      <label class="block text-sm font-medium mb-2 text-emerald-500">
+                        Visibility
+                      </label>
+                      <select
+                        v-model="editPostVisibility"
+                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+                      >
+                        <option value="PUBLIC">🌍 Public</option>
+                        <option value="PRIVATE">🔒 Private</option>
+                      </select>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-3 pt-2">
+                      <button
+                        type="submit"
+                        :disabled="isUpdatingPost"
+                        class="flex-1 px-4 py-3 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all disabled:opacity-50"
+                      >
+                        <span v-if="!isUpdatingPost">💾 Save Changes</span>
+                        <span v-else>Saving...</span>
+                      </button>
+                      <button
+                        type="button"
+                        @click="cancelEditPost"
+                        class="px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 transition-all font-medium"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                <!-- View Mode -->
+                <div v-else>
+                  <PostPreviewCard
+                    :post="post"
+                    variant="main"
+                  />
+                  
+                  <!-- Action Buttons -->
+                  <div class="flex gap-2 mt-2">
+                    <button
+                      @click="startEditPost(post)"
+                      class="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 active:scale-95 transition-all"
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button
+                      @click="handleDeletePost(post.id)"
+                      :disabled="isDeletingPostId === post.id"
+                      class="px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      <span v-if="isDeletingPostId === post.id">Deleting...</span>
+                      <span v-else>🗑️ Delete</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -896,6 +1122,13 @@ const createGroup = async () => {
           <!-- Error State -->
           <ErrorDisplayComponent :message="postsErrorMessage" class="mb-4" />
 
+          <!-- Post Action Messages -->
+          <div v-if="postActionSuccess" class="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-start gap-2 text-sm">
+            <span>✓</span>
+            <span>{{ postActionSuccess }}</span>
+          </div>
+          <ErrorDisplayComponent :message="postActionError" class="mb-4" />
+
           <!-- Empty State -->
           <div v-if="!isLoadingPosts && !postsErrorMessage && userPosts.length === 0" 
             class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-8 text-center shadow-lg">
@@ -906,12 +1139,98 @@ const createGroup = async () => {
 
           <!-- Posts List -->
           <div v-if="!isLoadingPosts && userPosts.length > 0" class="space-y-4">
-            <PostPreviewCard
-              v-for="post in userPosts"
-              :key="post.id"
-              :post="post"
-              variant="mobile"
-            />
+            <div v-for="post in userPosts" :key="post.id" class="space-y-3">
+              <!-- Edit Mode -->
+              <div v-if="editingPostId === post.id" class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-4 shadow-lg">
+                <h3 class="text-base font-bold text-emerald-500 mb-4">Edit Post</h3>
+                <form @submit.prevent="handleUpdatePost(post.id)" class="space-y-4">
+                  <!-- Title -->
+                  <div>
+                    <label class="block text-sm font-medium mb-2 text-emerald-500">
+                      Title
+                    </label>
+                    <input
+                      v-model="editPostTitle"
+                      type="text"
+                      placeholder="Enter post title..."
+                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+                    />
+                  </div>
+
+                  <!-- Body -->
+                  <div>
+                    <label class="block text-sm font-medium mb-2 text-emerald-500">
+                      Body
+                    </label>
+                    <textarea
+                      v-model="editPostBody"
+                      rows="5"
+                      placeholder="Write your post content..."
+                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all resize-vertical"
+                    ></textarea>
+                  </div>
+
+                  <!-- Visibility -->
+                  <div>
+                    <label class="block text-sm font-medium mb-2 text-emerald-500">
+                      Visibility
+                    </label>
+                    <select
+                      v-model="editPostVisibility"
+                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+                    >
+                      <option value="PUBLIC">🌍 Public</option>
+                      <option value="PRIVATE">🔒 Private</option>
+                    </select>
+                  </div>
+
+                  <!-- Action Buttons -->
+                  <div class="flex flex-col gap-2 pt-2">
+                    <button
+                      type="submit"
+                      :disabled="isUpdatingPost"
+                      class="w-full px-4 py-3 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all disabled:opacity-50 text-sm"
+                    >
+                      <span v-if="!isUpdatingPost">💾 Save Changes</span>
+                      <span v-else>Saving...</span>
+                    </button>
+                    <button
+                      type="button"
+                      @click="cancelEditPost"
+                      class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 transition-all font-medium text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- View Mode -->
+              <div v-else>
+                <PostPreviewCard
+                  :post="post"
+                  variant="mobile"
+                />
+                
+                <!-- Action Buttons -->
+                <div class="flex gap-2 mt-2">
+                  <button
+                    @click="startEditPost(post)"
+                    class="flex-1 px-3 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 active:scale-95 transition-all"
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    @click="handleDeletePost(post.id)"
+                    :disabled="isDeletingPostId === post.id"
+                    class="flex-1 px-3 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    <span v-if="isDeletingPostId === post.id">Deleting...</span>
+                    <span v-else>🗑️ Delete</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

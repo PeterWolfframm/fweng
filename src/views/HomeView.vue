@@ -1,27 +1,34 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import TwoColumnLayout from '../components/TwoColumnLayout.vue'
 import PostPreviewCard from '../components/PostPreviewCard.vue'
 import GroupPreviewCard from '../components/GroupPreviewCard.vue'
-import groups from '../groups.json'
 import { useAuthStore } from '@/stores/auth'
-import { fetchAllPosts } from '@/config/api'
+import { fetchPublicPosts, fetchAllGroups } from '@/config/api'
 
 const auth = useAuthStore()
-const firstThreeGroups = groups.slice(0, 3)
 
 // Reactive state for posts
 const articles = ref([])
 const loading = ref(true)
 const error = ref(null)
 
-// Fetch posts on component mount
+// Reactive state for groups
+const groups = ref([])
+const groupsLoading = ref(true)
+const groupsError = ref(null)
+
+// Get first three groups
+const firstThreeGroups = computed(() => groups.value.slice(0, 3))
+
+// Fetch posts and groups on component mount
 onMounted(async () => {
+  // Fetch posts
   try {
     loading.value = true
     error.value = null
     
-    const response = await fetchAllPosts()
+    const response = await fetchPublicPosts()
     
     // Map API response to match expected format
     articles.value = response.data.map(post => ({
@@ -37,6 +44,26 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
+  // Fetch groups
+  try {
+    groupsLoading.value = true
+    groupsError.value = null
+    
+    const response = await fetchAllGroups()
+    
+    // Map API response and add default icon/description if missing
+    groups.value = response.data.map(group => ({
+      ...group,
+      icon: group.icon || '👥',
+      description: group.description || 'A community for sharing and discussion.'
+    }))
+  } catch (err) {
+    console.error('Failed to fetch groups:', err)
+    groupsError.value = err.response?.data?.message || 'Failed to load groups.'
+  } finally {
+    groupsLoading.value = false
+  }
 })
 </script>
 
@@ -49,12 +76,25 @@ onMounted(async () => {
           @{{ auth.currentUser.username }}
         </p>
         <div class="mt-12">
-          <GroupPreviewCard
-            v-for="group in firstThreeGroups"
-            :key="group.id"
-            :group="group"
-            variant="sidebar"
-          />
+          <!-- Groups Loading State -->
+          <div v-if="groupsLoading" class="text-sm text-gray-500 dark:text-gray-400">
+            Loading groups...
+          </div>
+          
+          <!-- Groups Error State -->
+          <div v-else-if="groupsError" class="text-sm text-red-500 dark:text-red-400">
+            {{ groupsError }}
+          </div>
+          
+          <!-- Groups List -->
+          <template v-else>
+            <GroupPreviewCard
+              v-for="group in firstThreeGroups"
+              :key="group.id"
+              :group="group"
+              variant="sidebar"
+            />
+          </template>
         </div>
       </div>
     </template>
