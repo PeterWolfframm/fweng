@@ -2,24 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import { useAuthStore } from '@/stores/auth'
 
-const requireAuth = (to, from, next) => {
-  const auth = useAuthStore()
-  if (!auth.isLoggedIn) {
-    next({ name: 'login', query: { redirect: to.fullPath } })
-  } else {
-    next()
-  }
-}
-
-const guestOnly = (to, from, next) => {
-  const auth = useAuthStore()
-  if (auth.isLoggedIn) {
-    next('/profile')
-  } else {
-    next()
-  }
-}
-
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -42,6 +24,7 @@ const router = createRouter({
       path: '/users',
       name: 'users',
       component: () => import('../views/UserView.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/users/:name',
@@ -62,13 +45,27 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: () => import('../views/LoginView.vue'),
-      beforeEnter: guestOnly,
+      beforeEnter: (to, from, next) => {
+        const auth = useAuthStore()
+        if (auth.isLoggedIn) {
+          next('/profile')
+        } else {
+          next()
+        }
+      },
     },
     {
       path: '/register',
       name: 'register',
       component: () => import('../views/RegisterView.vue'),
-      beforeEnter: guestOnly,
+      beforeEnter: (to, from, next) => {
+        const auth = useAuthStore()
+        if (auth.isLoggedIn) {
+          next('/profile')
+        } else {
+          next()
+        }
+      },
     },
     {
       path: '/help',
@@ -84,48 +81,39 @@ const router = createRouter({
       path: '/profile',
       name: 'profile',
       component: () => import('../views/ProfileView.vue'),
-      beforeEnter: requireAuth,
+      meta: { requiresAuth: true },
     },
     {
       path: '/profile/overview',
       name: 'profile-overview',
       component: () => import('../views/ProfileOverviewView.vue'),
-      beforeEnter: requireAuth,
+      meta: { requiresAuth: true },
     },
     {
       path: '/profile/settings',
       name: 'profile-settings',
       component: () => import('../views/ProfileView.vue'),
-      beforeEnter: requireAuth,
+      meta: { requiresAuth: true },
     },
     {
       path: '/profile/information',
       name: 'profile-information',
       component: () => import('../views/ProfileInformationView.vue'),
-      beforeEnter: requireAuth,
+      meta: { requiresAuth: true },
     },
     {
       path: '/profile/history',
       name: 'profile-history',
       component: () => import('../views/ProfileHistoryView.vue'),
-      beforeEnter: requireAuth,
+      meta: { requiresAuth: true },
     },
     {
       path: '/profile/:section',
       name: 'profile-section',
       component: () => import('../views/ProfileView.vue'),
-      beforeEnter: requireAuth,
+      meta: { requiresAuth: true },
     },
   ],
 })
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('auth:unauthorized', () => {
-    const currentRoute = router.currentRoute.value
-    if (currentRoute.path.startsWith('/profile')) {
-      router.push({ name: 'login', query: { redirect: currentRoute.fullPath } })
-    }
-  })
-}
 
 export default router
