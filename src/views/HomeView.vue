@@ -5,7 +5,8 @@ import PostPreviewCard from '../components/PostPreviewCard.vue'
 import GroupPreviewCard from '../components/GroupPreviewCard.vue'
 import groups from '../groups.json'
 import { useAuthStore } from '@/stores/auth'
-import { fetchPublicPosts, fetchGroupPosts } from '@/config/api'
+import { fetchPublicPosts, fetchFeedPosts } from '@/config/api'
+import { watch } from 'vue'
 
 const auth = useAuthStore()
 const firstThreeGroups = groups.slice(0, 3)
@@ -16,34 +17,39 @@ const loading = ref(true)
 const error = ref(null)
 
 // Fetch posts on component mount
-onMounted(async () => {
-  if (auth.isLoggedIn && !auth.currentUser?.username) {
-    await auth.fetchCurrentUser()
-  }
+async function loadPosts() {
+  loading.value = true;
+  error.value = null;
 
   try {
-    loading.value = true
-    error.value = null
-
     const response = auth.isLoggedIn
-      ? await fetchGroupPosts()
-      : await fetchPublicPosts()
+      ? await fetchFeedPosts()
+      : await fetchPublicPosts();
 
-    articles.value = response.data.map(post => ({
+    articles.value = (response.data ?? []).map((post) => ({
       id: post.id,
       title: post.title,
       content: post.body,
-      icon: '💬',
+      icon: "💬",
       createdAt: post.createdAt,
-      visibility: post.visibility
-    }))
+      visibility: post.visibility,
+    }));
   } catch (err) {
-    console.error('Failed to fetch posts:', err)
-    error.value = err.response?.data?.message || 'Failed to load posts. Please try again.'
+    console.error("Failed to load posts:", err);
+    error.value =
+      err?.response?.data?.message ||
+      err?.message ||
+      "Failed to load posts.";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-})
+}
+
+onMounted(loadPosts);
+
+watch(() => auth.isLoggedIn, () => {
+  loadPosts();
+});
 
 </script>
 

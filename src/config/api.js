@@ -12,25 +12,32 @@ export const apiClient = axios.create({
 })
 
 // Add request interceptor to include JWT token if available
-apiClient.interceptors.request.use(
-  (config) => {
-    const session = localStorage.getItem('session')
-    if (session) {
-      try {
-        const { token } = JSON.parse(session)
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`
-        }
-      } catch {
-        // Invalid session data, ignore
-      }
+apiClient.interceptors.request.use((config) => {
+  const raw = localStorage.getItem("session");
+  if (!raw) return config;
+
+  try {
+    const { token } = JSON.parse(raw) || {};
+    if (!token) return config;
+
+    const cleaned = String(token).replace(/^Bearer\s+/i, "").trim();
+
+    // sorgt dafür, dass headers IMMER existiert:
+    config.headers = config.headers || {};
+
+    // Axios kann je nach Version AxiosHeaders nutzen -> beide Varianten ok:
+    if (typeof config.headers.set === "function") {
+      config.headers.set("Authorization", `Bearer ${cleaned}`);
+    } else {
+      config.headers["Authorization"] = `Bearer ${cleaned}`;
     }
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  },
-)
+  } catch {
+    // ignore
+  }
+
+  return config;
+});
+
 
 // API Methods
 
@@ -85,3 +92,10 @@ export const fetchGroupPosts = async () => {
   return await apiClient.get('/posts/group-posts')
 }
 
+export const fetchFeedPosts = async () => {
+  return await apiClient.get("/posts/feed");
+}
+
+export const fetchMyPosts = async () => {
+  return await apiClient.get("/posts/my-posts");
+}
