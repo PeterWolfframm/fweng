@@ -66,10 +66,10 @@ onMounted(async () => {
     
     const response = await fetchAllGroups()
     
-    // Map API response and add default icon/description if missing
+    // Map API response and add default emoji/description if missing
     groups.value = response.data.map(group => ({
       ...group,
-      icon: group.icon || '👥',
+      emoji: group.emoji || '👥',
       description: group.description || 'A community for sharing and discussion.'
     }))
   } catch (err) {

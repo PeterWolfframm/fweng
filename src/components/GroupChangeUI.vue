@@ -17,7 +17,7 @@
       >
         <option value="">📝 No Group</option>
         <option v-for="group in availableGroups" :key="group.id" :value="group.id">
-          👫 {{ group.name }}
+          {{ group.emoji || '👫' }} {{ group.name }}
         </option>
       </select>
       <div :class="buttonContainerClass">

@@ -37,11 +37,11 @@ const navigateToGroup = () => {
     @click="navigateToGroup"
   >
     <template #emoji>
-      {{ group.icon }}
+      {{ group.emoji || '👥' }}
     </template>
     <h3 class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600">
       {{ group.name }}
     </h3>
-    <div :class="contentClass" class="text-sm opacity-70" v-html="group.description"></div>
+    <div :class="contentClass" class="text-sm opacity-70" v-html="group.description || ''"></div>
   </CardFoundationComponent>
 </template>

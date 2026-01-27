@@ -11,12 +11,20 @@ const router = useRouter()
 const email = ref('')
 const username = ref('')
 const password = ref('')
+const confirmPassword = ref('')
 
 // UI state
 const errorMessage = ref('')
 const successMessage = ref('')
 const isLoading = ref(false)
 const isFetchingUser = ref(true)
+const passwordValidation = ref({
+  length: false,
+  uppercase: false,
+  lowercase: false,
+  digit: false,
+  special: false
+})
 
 // Load current user data
 onMounted(async () => {
@@ -38,6 +46,39 @@ onMounted(async () => {
   }
 })
 
+// Validate password in real-time
+const validatePassword = (pwd) => {
+  passwordValidation.value = {
+    length: pwd.length >= 8 && pwd.length <= 15,
+    uppercase: /[A-Z]/.test(pwd),
+    lowercase: /[a-z]/.test(pwd),
+    digit: /\d/.test(pwd),
+    special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)
+  }
+}
+
+// Watch password changes for validation
+const onPasswordInput = (event) => {
+  password.value = event.target.value
+  if (password.value) {
+    validatePassword(password.value)
+  } else {
+    passwordValidation.value = {
+      length: false,
+      uppercase: false,
+      lowercase: false,
+      digit: false,
+      special: false
+    }
+  }
+}
+
+// Check if password is valid
+const isPasswordValid = () => {
+  if (!password.value) return true // Password is optional
+  return Object.values(passwordValidation.value).every(v => v)
+}
+
 // Handle profile update
 const updateProfile = async () => {
   errorMessage.value = ''
@@ -52,6 +93,19 @@ const updateProfile = async () => {
   if (username.value.trim() && (username.value.trim().length < 4 || username.value.trim().length > 16)) {
     errorMessage.value = 'Username must be between 4 and 16 characters'
     return
+  }
+  
+  // Password validation
+  if (password.value.trim()) {
+    if (!isPasswordValid()) {
+      errorMessage.value = 'Password does not meet all requirements'
+      return
+    }
+    
+    if (password.value !== confirmPassword.value) {
+      errorMessage.value = 'Passwords do not match'
+      return
+    }
   }
   
   isLoading.value = true
@@ -72,8 +126,16 @@ const updateProfile = async () => {
       await auth.fetchCurrentUser()
     }
     
-    // Clear password field for security
+    // Clear password fields for security
     password.value = ''
+    confirmPassword.value = ''
+    passwordValidation.value = {
+      length: false,
+      uppercase: false,
+      lowercase: false,
+      digit: false,
+      special: false
+    }
     
     setTimeout(() => {
       successMessage.value = ''
@@ -175,13 +237,78 @@ const handleLogout = () => {
                   New Password (optional)
                 </label>
                 <input
-                  v-model="password"
+                  :value="password"
+                  @input="onPasswordInput"
                   type="password"
                   placeholder="Leave blank to keep current password"
                   class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
                 />
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  Password must be 8-15 characters with uppercase, lowercase, number, and special character
+                
+                <!-- Password validation indicators -->
+                <div v-if="password" class="mt-3 space-y-2">
+                  <div class="flex items-center gap-2 text-xs">
+                    <span :class="passwordValidation.length ? 'text-emerald-500' : 'text-gray-400'">
+                      {{ passwordValidation.length ? '✓' : '○' }}
+                    </span>
+                    <span :class="passwordValidation.length ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'">
+                      8-15 characters
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-2 text-xs">
+                    <span :class="passwordValidation.uppercase ? 'text-emerald-500' : 'text-gray-400'">
+                      {{ passwordValidation.uppercase ? '✓' : '○' }}
+                    </span>
+                    <span :class="passwordValidation.uppercase ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'">
+                      At least one uppercase letter
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-2 text-xs">
+                    <span :class="passwordValidation.lowercase ? 'text-emerald-500' : 'text-gray-400'">
+                      {{ passwordValidation.lowercase ? '✓' : '○' }}
+                    </span>
+                    <span :class="passwordValidation.lowercase ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'">
+                      At least one lowercase letter
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-2 text-xs">
+                    <span :class="passwordValidation.digit ? 'text-emerald-500' : 'text-gray-400'">
+                      {{ passwordValidation.digit ? '✓' : '○' }}
+                    </span>
+                    <span :class="passwordValidation.digit ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'">
+                      At least one digit
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-2 text-xs">
+                    <span :class="passwordValidation.special ? 'text-emerald-500' : 'text-gray-400'">
+                      {{ passwordValidation.special ? '✓' : '○' }}
+                    </span>
+                    <span :class="passwordValidation.special ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'">
+                      At least one special character
+                    </span>
+                  </div>
+                </div>
+                
+                <p v-else class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Leave blank to keep your current password
+                </p>
+              </div>
+
+              <!-- Confirm Password (shown only when password is entered) -->
+              <div v-if="password">
+                <label class="block text-sm font-medium mb-2 text-emerald-500">
+                  Confirm New Password
+                </label>
+                <input
+                  v-model="confirmPassword"
+                  type="password"
+                  placeholder="Re-enter your new password"
+                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
+                />
+                <p v-if="confirmPassword && password !== confirmPassword" class="text-xs text-red-500 dark:text-red-400 mt-2">
+                  Passwords do not match
+                </p>
+                <p v-else-if="confirmPassword && password === confirmPassword" class="text-xs text-emerald-500 dark:text-emerald-400 mt-2">
+                  ✓ Passwords match
                 </p>
               </div>
 
@@ -307,13 +434,78 @@ const handleLogout = () => {
                 New Password (optional)
               </label>
               <input
-                v-model="password"
+                :value="password"
+                @input="onPasswordInput"
                 type="password"
                 placeholder="Leave blank to keep current"
                 class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
               />
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                Must be 8-15 characters with uppercase, lowercase, number, and special character
+              
+              <!-- Password validation indicators -->
+              <div v-if="password" class="mt-3 space-y-1.5">
+                <div class="flex items-center gap-2 text-xs">
+                  <span :class="passwordValidation.length ? 'text-emerald-500' : 'text-gray-400'">
+                    {{ passwordValidation.length ? '✓' : '○' }}
+                  </span>
+                  <span :class="passwordValidation.length ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'">
+                    8-15 characters
+                  </span>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                  <span :class="passwordValidation.uppercase ? 'text-emerald-500' : 'text-gray-400'">
+                    {{ passwordValidation.uppercase ? '✓' : '○' }}
+                  </span>
+                  <span :class="passwordValidation.uppercase ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'">
+                    At least one uppercase letter
+                  </span>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                  <span :class="passwordValidation.lowercase ? 'text-emerald-500' : 'text-gray-400'">
+                    {{ passwordValidation.lowercase ? '✓' : '○' }}
+                  </span>
+                  <span :class="passwordValidation.lowercase ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'">
+                    At least one lowercase letter
+                  </span>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                  <span :class="passwordValidation.digit ? 'text-emerald-500' : 'text-gray-400'">
+                    {{ passwordValidation.digit ? '✓' : '○' }}
+                  </span>
+                  <span :class="passwordValidation.digit ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'">
+                    At least one digit
+                  </span>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                  <span :class="passwordValidation.special ? 'text-emerald-500' : 'text-gray-400'">
+                    {{ passwordValidation.special ? '✓' : '○' }}
+                  </span>
+                  <span :class="passwordValidation.special ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'">
+                    At least one special character
+                  </span>
+                </div>
+              </div>
+              
+              <p v-else class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Leave blank to keep your current password
+              </p>
+            </div>
+
+            <!-- Confirm Password (shown only when password is entered) -->
+            <div v-if="password">
+              <label class="block text-sm font-medium mb-2 text-emerald-500">
+                Confirm New Password
+              </label>
+              <input
+                v-model="confirmPassword"
+                type="password"
+                placeholder="Re-enter your new password"
+                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+              />
+              <p v-if="confirmPassword && password !== confirmPassword" class="text-xs text-red-500 dark:text-red-400 mt-2">
+                Passwords do not match
+              </p>
+              <p v-else-if="confirmPassword && password === confirmPassword" class="text-xs text-emerald-500 dark:text-emerald-400 mt-2">
+                ✓ Passwords match
               </p>
             </div>
 

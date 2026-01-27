@@ -42,6 +42,8 @@ const postsErrorMessage = ref('')
 
 // Form data for create group
 const groupName = ref('')
+const groupEmoji = ref('')
+const groupDescription = ref('')
 
 // UI state for group creation
 const groupErrorMessage = ref('')
@@ -401,18 +403,34 @@ const createGroup = async () => {
     return
   }
   
+  // Validate emoji if provided
+  if (groupEmoji.value.trim() && groupEmoji.value.trim().length > 10) {
+    groupErrorMessage.value = 'Emoji must be 10 characters or less'
+    return
+  }
+  
+  // Validate description if provided
+  if (groupDescription.value.trim() && groupDescription.value.trim().length > 500) {
+    groupErrorMessage.value = 'Description must be 500 characters or less'
+    return
+  }
+  
   isLoadingGroup.value = true
   const groupNameToCreate = groupName.value.trim()
+  const emojiToCreate = groupEmoji.value.trim() || undefined
+  const descriptionToCreate = groupDescription.value.trim() || undefined
 
   try {
-    console.log('[ProfileOverview] Creating group with name:', groupNameToCreate)
-    const response = await createGroupApi(groupNameToCreate)
+    console.log('[ProfileOverview] Creating group with name:', groupNameToCreate, 'emoji:', emojiToCreate, 'description:', descriptionToCreate)
+    const response = await createGroupApi(groupNameToCreate, emojiToCreate, descriptionToCreate)
     console.log('[ProfileOverview] Group created successfully:', response.data)
     
     groupSuccessMessage.value = 'Group created successfully!'
     
     // Clear form
     groupName.value = ''
+    groupEmoji.value = ''
+    groupDescription.value = ''
     
     // Store count before refresh to detect if new group appears
     const groupsCountBefore = userGroups.value.length
@@ -759,7 +777,7 @@ const handleChangePostGroup = async (postId) => {
               >
                 <option value="">📝 None (Personal post)</option>
                 <option v-for="group in availableGroups" :key="group.id" :value="group.id">
-                  👫 {{ group.name }}
+                  {{ group.emoji || '👫' }} {{ group.name }}
                 </option>
               </select>
             </div>
@@ -805,6 +823,36 @@ const handleChangePostGroup = async (postId) => {
               />
             </div>
 
+            <!-- Group Emoji -->
+            <div>
+              <label class="block text-sm font-medium mb-2 text-emerald-500">
+                Emoji (Optional)
+              </label>
+              <input
+                v-model="groupEmoji"
+                type="text"
+                placeholder="e.g., ✈️ 🌍 🎨"
+                maxlength="10"
+                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400"
+              />
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Max 10 characters</p>
+            </div>
+
+            <!-- Group Description -->
+            <div>
+              <label class="block text-sm font-medium mb-2 text-emerald-500">
+                Description (Optional)
+              </label>
+              <textarea
+                v-model="groupDescription"
+                rows="4"
+                placeholder="Describe your group..."
+                maxlength="500"
+                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 hover:border-emerald-400 resize-vertical"
+              ></textarea>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ groupDescription.length }}/500 characters</p>
+            </div>
+
             <template #actions>
               <button
                 type="submit"
@@ -816,7 +864,7 @@ const handleChangePostGroup = async (postId) => {
               </button>
               <button
                 type="button"
-                @click="groupName = ''"
+                @click="groupName = ''; groupEmoji = ''; groupDescription = ''"
                 class="px-6 py-4 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all font-medium"
               >
                 Clear
@@ -1096,7 +1144,7 @@ const handleChangePostGroup = async (postId) => {
             >
               <option value="">📝 None (Personal post)</option>
               <option v-for="group in availableGroups" :key="group.id" :value="group.id">
-                👫 {{ group.name }}
+                {{ group.emoji || '👫' }} {{ group.name }}
               </option>
             </select>
           </div>
@@ -1145,6 +1193,36 @@ const handleChangePostGroup = async (postId) => {
             />
           </div>
 
+          <!-- Group Emoji -->
+          <div>
+            <label class="block text-sm font-medium mb-2 text-emerald-500">
+              Emoji (Optional)
+            </label>
+            <input
+              v-model="groupEmoji"
+              type="text"
+              placeholder="e.g., ✈️ 🌍 🎨"
+              maxlength="10"
+              class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Max 10 characters</p>
+          </div>
+
+          <!-- Group Description -->
+          <div>
+            <label class="block text-sm font-medium mb-2 text-emerald-500">
+              Description (Optional)
+            </label>
+            <textarea
+              v-model="groupDescription"
+              rows="4"
+              placeholder="Describe your group..."
+              maxlength="500"
+              class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all resize-vertical"
+            ></textarea>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ groupDescription.length }}/500 characters</p>
+          </div>
+
           <template #actions>
             <button
               type="submit"
@@ -1156,7 +1234,7 @@ const handleChangePostGroup = async (postId) => {
             </button>
             <button
               type="button"
-              @click="groupName = ''"
+              @click="groupName = ''; groupEmoji = ''; groupDescription = ''"
               class="w-full px-6 py-4 rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:border-emerald-400 transition-all font-medium"
             >
               Clear

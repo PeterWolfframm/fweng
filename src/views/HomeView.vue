@@ -4,7 +4,7 @@ import TwoColumnLayout from '../components/TwoColumnLayout.vue'
 import PostPreviewCard from '../components/PostPreviewCard.vue'
 import GroupPreviewCard from '../components/GroupPreviewCard.vue'
 import { useAuthStore } from '@/stores/auth'
-import { fetchPublicPosts, fetchAllGroups, fetchAllGroupPosts } from '@/config/api'
+import { fetchPublicPosts, fetchAllGroups, fetchAllGroupPosts, fetchMyGroups } from '@/config/api'
 
 const auth = useAuthStore()
 
@@ -18,6 +18,9 @@ const groups = ref([])
 const groupsLoading = ref(true)
 const groupsError = ref(null)
 
+// Reactive state for user's groups
+const myGroups = ref([])
+
 // Reactive state for group-post associations
 const groupPostAssociations = ref([])
 
@@ -26,6 +29,17 @@ const firstThreeGroups = computed(() => groups.value.slice(0, 3))
 
 // Fetch posts and groups on component mount
 onMounted(async () => {
+  // Fetch user's groups if logged in
+  if (auth.isLoggedIn) {
+    try {
+      const myGroupsResponse = await fetchMyGroups()
+      myGroups.value = myGroupsResponse.data.map(g => g.id)
+    } catch (err) {
+      console.error('Failed to fetch user groups:', err)
+      // Continue even if this fails
+    }
+  }
+
   // Fetch posts
   try {
     loading.value = true
@@ -55,7 +69,7 @@ onMounted(async () => {
     }
     
     // Map API response and include group/author information
-    articles.value = response.data.map(post => {
+    const mappedPosts = response.data.map(post => {
       const association = groupPostAssociations.value.find(assoc => assoc.postId === post.id)
       return {
         id: post.id,
@@ -64,9 +78,22 @@ onMounted(async () => {
         icon: '💬', // Default icon since API doesn't provide it
         createdAt: post.createdAt,
         sharedBy: association?.sharedBy,
-        groupName: association ? groupsMap[association.groupId] : null
+        groupName: association ? groupsMap[association.groupId] : null,
+        groupId: association?.groupId,
+        // Note: Using sharedBy as author since API doesn't return post author
+        // This shows who shared the post to the group
+        author: association?.sharedBy
       }
     })
+
+    // Sort posts: user's group posts first, then other posts
+    if (myGroups.value.length > 0) {
+      const userGroupPosts = mappedPosts.filter(post => post.groupId && myGroups.value.includes(post.groupId))
+      const otherPosts = mappedPosts.filter(post => !post.groupId || !myGroups.value.includes(post.groupId))
+      articles.value = [...userGroupPosts, ...otherPosts]
+    } else {
+      articles.value = mappedPosts
+    }
   } catch (err) {
     console.error('Failed to fetch posts:', err)
     error.value = err.response?.data?.message || 'Failed to load posts. Please try again.'
@@ -81,10 +108,10 @@ onMounted(async () => {
     
     const response = await fetchAllGroups()
     
-    // Map API response and add default icon/description if missing
+    // Map API response and add default emoji/description if missing
     groups.value = response.data.map(group => ({
       ...group,
-      icon: group.icon || '👥',
+      emoji: group.emoji || '👥',
       description: group.description || 'A community for sharing and discussion.'
     }))
   } catch (err) {
@@ -155,6 +182,7 @@ onMounted(async () => {
         :post="article"
         :shared-by="article.sharedBy"
         :group-name="article.groupName"
+        :author="article.author"
         variant="main"
       />
     </template>
@@ -186,6 +214,7 @@ onMounted(async () => {
         :post="article"
         :shared-by="article.sharedBy"
         :group-name="article.groupName"
+        :author="article.author"
         variant="mobile"
       />
     </template>

@@ -128,11 +128,16 @@ export const fetchGroupMemberships = async () => {
 
 /**
  * Create a new group
- * @param {string} name - The group name
+ * @param {string} name - The group name (5-15 chars)
+ * @param {string} [emoji] - Optional emoji for the group (max 10 chars)
+ * @param {string} [description] - Optional description for the group (max 500 chars)
  * @returns {Promise} Response with created GroupDto object
  */
-export const createGroup = async (name) => {
-  return await apiClient.post('/groups', { name })
+export const createGroup = async (name, emoji, description) => {
+  const body = { name }
+  if (emoji) body.emoji = emoji
+  if (description) body.description = description
+  return await apiClient.post('/groups', body)
 }
 
 /**
@@ -157,6 +162,14 @@ export const fetchPublicPosts = async () => {
  */
 export const fetchAllGroups = async () => {
   return await apiClient.get('/groups')
+}
+
+/**
+ * Fetch groups the authenticated user belongs to
+ * @returns {Promise} Response with array of GroupDto objects
+ */
+export const fetchMyGroups = async () => {
+  return await apiClient.get('/groups/my-groups')
 }
 
 /**
@@ -253,7 +266,10 @@ export const deletePost = async (postId) => {
 /**
  * Update a group
  * @param {string|number} groupId - The group ID to update
- * @param {Object} groupData - Group data (name)
+ * @param {Object} groupData - Group data (name, emoji?, description?)
+ *   - name: string (5-15 chars)
+ *   - emoji: string (optional, max 10 chars)
+ *   - description: string (optional, max 500 chars)
  * @returns {Promise} Response with updated GroupDto object
  */
 export const updateGroup = async (groupId, groupData) => {
