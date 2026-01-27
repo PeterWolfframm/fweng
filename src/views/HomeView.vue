@@ -5,7 +5,7 @@ import PostPreviewCard from '../components/PostPreviewCard.vue'
 import GroupPreviewCard from '../components/GroupPreviewCard.vue'
 import groups from '../groups.json'
 import { useAuthStore } from '@/stores/auth'
-import { fetchAllPosts } from '@/config/api'
+import { fetchPublicPosts, fetchGroupPosts } from '@/config/api'
 
 const auth = useAuthStore()
 const firstThreeGroups = groups.slice(0, 3)
@@ -17,19 +17,25 @@ const error = ref(null)
 
 // Fetch posts on component mount
 onMounted(async () => {
+  if (auth.isLoggedIn && !auth.currentUser?.username) {
+    await auth.fetchCurrentUser()
+  }
+
   try {
     loading.value = true
     error.value = null
-    
-    const response = await fetchAllPosts()
-    
-    // Map API response to match expected format
+
+    const response = auth.isLoggedIn
+      ? await fetchGroupPosts()
+      : await fetchPublicPosts()
+
     articles.value = response.data.map(post => ({
       id: post.id,
       title: post.title,
       content: post.body,
-      icon: '💬', // Default icon since API doesn't provide it
-      createdAt: post.createdAt
+      icon: '💬',
+      createdAt: post.createdAt,
+      visibility: post.visibility
     }))
   } catch (err) {
     console.error('Failed to fetch posts:', err)
@@ -38,6 +44,7 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
 </script>
 
 <template>
@@ -45,9 +52,6 @@ onMounted(async () => {
     <template #sidebar>
       <div class="px-0 pt-0">
         <h1 class="text-6xl font-bold mb-2">🗣️ yap.</h1>
-        <p v-if="auth.currentUser" class="text-xl text-gray-500 dark:text-gray-400 mb-8">
-          @{{ auth.currentUser.username }}
-        </p>
         <div class="mt-12">
           <GroupPreviewCard
             v-for="group in firstThreeGroups"
@@ -69,7 +73,7 @@ onMounted(async () => {
       <div v-else-if="error" class="text-center py-8">
         <p class="text-red-500 dark:text-red-400 mb-2">{{ error }}</p>
         <p class="text-sm text-gray-500 dark:text-gray-400">
-          Please make sure you're logged in to view posts.
+          Could not load posts right now.
         </p>
       </div>
 

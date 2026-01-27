@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // Base URL for the backend API
-export const API_BASE_URL = 'http://localhost:8081/api'
+export const API_BASE_URL = 'http://localhost:8080/api'
 
 // Configured axios instance with default settings
 export const apiClient = axios.create({
@@ -76,3 +76,12 @@ export const createGroup = async (name) => {
 export const fetchAllPosts = async () => {
   return await apiClient.get('/posts')
 }
+
+export const fetchPublicPosts = async () => {
+  return await apiClient.get('/posts/public')
+}
+
+export const fetchGroupPosts = async () => {
+  return await apiClient.get('/posts/group-posts')
+}
+

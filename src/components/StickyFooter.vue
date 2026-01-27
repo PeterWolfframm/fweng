@@ -87,7 +87,9 @@ const navigateToSubMenu = (subItem) => {
     router.push(subItem.path)
     isProfileMenuOpen.value = false
   }
-}
+} 
+const currentUsername = computed(() => auth.currentUser?.username)
+
 </script>
 
 <template>
@@ -106,6 +108,9 @@ const navigateToSubMenu = (subItem) => {
               <!-- Profile Submenu -->
               <Transition name="submenu">
                 <div v-if="isProfileMenuOpen" class="submenu-container">
+                    <p v-if="currentUsername" class="submenu-container">
+                      @{{ currentUsername }}
+                    </p>
                   <div class="flex flex-col gap-2">
                     <button
                       v-for="subItem in filteredProfileSubMenuItems"

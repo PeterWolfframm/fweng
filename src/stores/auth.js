@@ -3,7 +3,6 @@ import { defineStore } from "pinia";
 import {
   loadSession,
   saveSession,
-  clearSession,
 } from "@/utils/storage";
 
 export const useAuthStore = defineStore("auth", () => {
@@ -78,7 +77,8 @@ export const useAuthStore = defineStore("auth", () => {
 
   function logout() {
     session.value = null;
-    clearSession();
+    localStorage.removeItem("session");
+    localStorage.removeItem("fweng_session");
   }
 
   return {

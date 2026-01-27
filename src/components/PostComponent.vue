@@ -1,6 +1,25 @@
 <script setup>
 import { defineProps } from 'vue'
 import EmojiContainer from './EmojiContainer.vue'
+import { ref, onMounted } from 'vue'
+import { fetchPublicPosts, fetchGroupPosts } from '@/config/api'
+
+const posts = ref([])
+
+onMounted(async () => {
+  const session = localStorage.getItem("session")
+
+  try {
+    if (session) {
+      posts.value = (await fetchGroupPosts()).data
+    } else {
+      posts.value = (await fetchPublicPosts()).data
+    }
+  } catch (e) {
+    console.error("Failed to load posts", e)
+    posts.value = []
+  }
+})
 
 defineProps({
   post: {
