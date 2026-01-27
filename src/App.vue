@@ -1,23 +1,54 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
-import ThemeSwitcher from './components/ThemeSwitcher.vue'
+import StickyFooter from './components/StickyFooter.vue'
 
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
+const handleUnauthorized = () => {
+  if (auth.isLoggedIn) {
+    auth.logout()
+  }
+  if (route.path.startsWith('/profile')) {
+    router.push({ name: 'login', query: { redirect: route.fullPath } })
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('auth:unauthorized', handleUnauthorized)
+
+  if (auth.validateSession() && auth.isLoggedIn) {
+    auth.fetchCurrentUser()
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('auth:unauthorized', handleUnauthorized)
+})
+
 const isHome = computed(() => route.path === '/')
-const isArticles = computed(() => route.path.startsWith('/articles'))
+const isArticles = computed(() => route.path.startsWith('/posts'))
+
+const hanldeLogout = () => {
+  auth.logout()
+  router.push('/')
+}
+
+const currentUser = computed(() => auth.currentUser)
 
 const navigationLabel = computed(() => {
-  if (isHome.value) return 'articles'
+  if (isHome.value) return 'posts'
   if (isArticles.value) return 'home'
   return 'home'
 })
 
 const handleNavigation = () => {
   if (isHome.value) {
-    router.push('/articles')
+    router.push('/posts')
   } else {
     router.push('/')
   }
@@ -25,39 +56,9 @@ const handleNavigation = () => {
 </script>
 
 <template>
-  <header class="fixed top-0 left-0 right-0 z-50 bg-transparent backdrop-blur-sm">
-    <div class="px-4 lg:px-8 py-4">
-      <div class="flex items-center justify-between">
-        <div class="flex-1">
-          <router-link to="/">
-          <h1
-              class="text-3xl lg:text-4xl font-bold cursor-pointer hover:opacity-80 transition-opacity"
-              :class="{ 'lg:opacity-0 lg:pointer-events-none': isHome }"
-          >
-            🗣️ yap.
-          </h1>
-          </router-link>
-        </div>
-
-        <div class="hidden lg:flex flex-none gap-4 items-center">
-          <button
-            @click="handleNavigation"
-            class="btn btn-ghost text-base font-medium hover:opacity-70"
-            :aria-label="`Go to ${navigationLabel}`"
-          >
-            {{ navigationLabel }}
-          </button>
-          <ThemeSwitcher />
-        </div>
-
-        <div class="flex-none lg:hidden">
-          <ThemeSwitcher />
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <div class="pt-20">
+  <div class="pb-20">
     <RouterView />
   </div>
+
+  <StickyFooter />
 </template>

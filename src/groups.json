@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "name": "roadkill",
+    "icon": "🚴🛣️🌄",
+    "description": "A community dedicated to "
+  },
+  {
+    "id": 2,
+    "name": "airborne",
+    "icon": "✈️💨🔥",
+    "description": "For aviation enthusiasts, fighter jet aficionados, and those passionate about the science of flight."
+  },
+  {
+    "id": 3,
+    "name": "lanitas",
+    "icon": "🎤🌙💔",
+    "description": "A passionate community celebrating Lana Del Rey's artistry, aesthetic, and cultural influence."
+  }
+]

@@ -1,93 +1,209 @@
 <script setup>
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import EmojiContainer from '../components/EmojiContainer.vue'
-import articles from '../articles.json'
+import { ref, onMounted, computed } from 'vue'
+import TwoColumnLayout from '../components/TwoColumnLayout.vue'
+import PostPreviewCard from '../components/PostPreviewCard.vue'
+import GroupPreviewCard from '../components/GroupPreviewCard.vue'
+import { useAuthStore } from '@/stores/auth'
+import { fetchPublicPosts, fetchAllGroups, fetchAllGroupPosts, fetchMyGroups } from '@/config/api'
 
-const router = useRouter()
+const auth = useAuthStore()
 
-const uniqueEmojiCombinations = computed(() => {
-  const emojiSet = new Set()
-  articles.forEach((article) => {
-    if (article.icon) {
-      emojiSet.add(article.icon)
+const articles = ref([])
+const loading = ref(true)
+const error = ref(null)
+
+const groups = ref([])
+const groupsLoading = ref(true)
+const groupsError = ref(null)
+
+const myGroups = ref([])
+
+const groupPostAssociations = ref([])
+
+const firstThreeGroups = computed(() => groups.value.slice(0, 3))
+
+onMounted(async () => {
+  // Fetch user's groups if logged in
+  if (auth.isLoggedIn) {
+    try {
+      const myGroupsResponse = await fetchMyGroups()
+      myGroups.value = myGroupsResponse.data.map(g => g.id)
+    } catch (err) {
+      console.error('Failed to fetch user groups:', err)
     }
-  })
-  return Array.from(emojiSet)
-})
+  }
 
-const navigateToArticle = (title) => {
-  router.push(`/articles/${encodeURIComponent(title)}`)
-}
+  // Fetch public posts
+  try {
+    loading.value = true
+    error.value = null
+    
+    const response = await fetchPublicPosts()
+    
+    let groupsMap = {}
+    let groupsEmojiMap = {}
+    
+    // Only fetch group associations if logged in (backend requires auth)
+    if (auth.isLoggedIn) {
+      try {
+        const groupPostsResponse = await fetchAllGroupPosts()
+        groupPostAssociations.value = groupPostsResponse.data.map(gp => ({
+          postId: gp.postId,
+          groupId: gp.groupId,
+          sharedBy: gp.username,
+          sharedById: gp.userId
+        }))
+        
+        const groupsResponse = await fetchAllGroups()
+        groupsMap = groupsResponse.data.reduce((map, group) => {
+          map[group.id] = group.name
+          return map
+        }, {})
+        groupsEmojiMap = groupsResponse.data.reduce((map, group) => {
+          map[group.id] = group.emoji || '👥'
+          return map
+        }, {})
+      } catch (err) {
+        console.error('Failed to fetch group associations:', err)
+      }
+    }
+    
+    const mappedPosts = response.data.map(post => {
+      const association = groupPostAssociations.value.find(assoc => assoc.postId === post.id)
+      return {
+        id: post.id,
+        title: post.title,
+        content: post.body,
+        icon: association && groupsEmojiMap[association.groupId] ? groupsEmojiMap[association.groupId] : '💬',
+        createdAt: post.createdAt,
+        sharedBy: association?.sharedBy,
+        groupName: association ? groupsMap[association.groupId] : null,
+        groupId: association?.groupId,
+        author: association?.sharedBy
+      }
+    })
+
+    if (myGroups.value.length > 0) {
+      const userGroupPosts = mappedPosts.filter(post => post.groupId && myGroups.value.includes(post.groupId))
+      const otherPosts = mappedPosts.filter(post => !post.groupId || !myGroups.value.includes(post.groupId))
+      articles.value = [...userGroupPosts, ...otherPosts]
+    } else {
+      articles.value = mappedPosts
+    }
+  } catch (err) {
+    console.error('Failed to fetch posts:', err)
+    error.value = err.response?.data?.message || 'Failed to load posts. Please try again.'
+  } finally {
+    loading.value = false
+  }
+
+  // Fetch groups for sidebar - only if logged in (backend requires auth)
+  if (auth.isLoggedIn) {
+    try {
+      groupsLoading.value = true
+      groupsError.value = null
+      
+      const response = await fetchAllGroups()
+      
+      groups.value = response.data.map(group => ({
+        ...group,
+        emoji: group.emoji || '👥',
+        description: group.description || 'A community for sharing and discussion.'
+      }))
+    } catch (err) {
+      console.error('Failed to fetch groups:', err)
+      groupsError.value = err.response?.data?.message || 'Failed to load groups.'
+    } finally {
+      groupsLoading.value = false
+    }
+  } else {
+    // Not logged in - skip group fetching
+    groupsLoading.value = false
+  }
+})
 </script>
 
 <template>
-  <main class="relative w-full p-0 m-0 max-w-full overflow-x-hidden">
-    <div class="hidden lg:flex w-full h-[calc(100vh-5rem)]">
-      <aside class="w-1/3 sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto">
-        <div class="w-full px-8 pt-8">
-          <h1 class="text-6xl font-bold mb-8">🗣️ yap.</h1>
-          <div class="mt-12 space-y-8">
-            <div
-              v-for="(emoji, index) in uniqueEmojiCombinations"
-              :key="index"
-              class="flex items-center justify-start py-2 transition-transform duration-200 ease-in-out hover:tranemerald-x-1"
-            >
-              <div
-                class="[&_.emoji-container]:static [&_.emoji-container]:w-20 [&_.emoji-container]:h-[60px] [&_.emoji-container]:m-0 [&_.emoji-container]:shadow-md [&_.emoji-container]:transition-all [&_.emoji-container]:duration-300 [&_.emoji-container]:ease-in-out hover:[&_.emoji-container]:shadow-[0_4px_12px_rgba(16,185,129,0.2)] hover:[&_.emoji-container]:scale-105"
-              >
-                <EmojiContainer>
-                  {{ emoji }}
-                </EmojiContainer>
-              </div>
-            </div>
+  <TwoColumnLayout>
+    <template #sidebar>
+      <div class="px-0 pt-0">
+        <h1 class="text-6xl font-bold mb-2">🗣️ yap.</h1>
+        <p v-if="auth.currentUser" class="text-xl text-gray-500 dark:text-gray-400 mb-8">
+          @{{ auth.currentUser.username }}
+        </p>
+        <div class="mt-12">
+          <div v-if="!auth.isLoggedIn" class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="mb-2">Login to see groups</p>
           </div>
-        </div>
-      </aside>
-
-      <div class="flex-1 w-2/3 overflow-y-auto">
-        <div class="p-8">
-          <div
-            v-for="article in articles"
-            :key="article.id"
-            @click="navigateToArticle(article.title)"
-            class="group mt-8 flex relative p-4 rounded-xl border-2 border-transparent cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)] lg:mt-0 lg:py-6 lg:px-4 lg:pl-20 before:content-[''] before:border-l before:border-gray-300 dark:before:border-gray-700 before:absolute before:left-0 before:bottom-[calc(50%+25px)] before:h-[calc(50%-25px)] before:hidden before:lg:block after:content-[''] after:border-l after:border-gray-300 dark:after:border-gray-700 after:absolute after:left-0 after:top-[calc(50%+25px)] after:h-[calc(50%-25px)] after:hidden after:lg:block first:before:hidden! last:after:hidden!"
-          >
-            <EmojiContainer>
-              {{ article.icon }}
-            </EmojiContainer>
-            <div class="flex-1 ml-4">
-              <h3
-                class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600"
-              >
-                {{ article.title }}
-              </h3>
-              <div v-html="article.content"></div>
-            </div>
+          
+          <div v-else-if="groupsLoading" class="text-sm text-gray-500 dark:text-gray-400">
+            Loading groups...
           </div>
+          
+          <div v-else-if="groupsError" class="text-sm text-red-500 dark:text-red-400">
+            {{ groupsError }}
+          </div>
+          
+          <template v-else>
+            <GroupPreviewCard
+              v-for="group in firstThreeGroups"
+              :key="group.id"
+              :group="group"
+              variant="sidebar"
+            />
+          </template>
         </div>
       </div>
-    </div>
+    </template>
 
-    <div class="lg:hidden p-6">
-      <div
+    <template #main>
+      <div v-if="loading" class="text-center py-8">
+        <p class="text-gray-500 dark:text-gray-400">Loading posts...</p>
+      </div>
+
+      <div v-else-if="error" class="text-center py-8">
+        <p class="text-red-500 dark:text-red-400 mb-2">{{ error }}</p>
+      </div>
+
+      <div v-else-if="articles.length === 0" class="text-center py-8">
+        <p class="text-gray-500 dark:text-gray-400">No posts available yet.</p>
+      </div>
+
+      <PostPreviewCard
+        v-else
         v-for="article in articles"
         :key="article.id"
-        @click="navigateToArticle(article.title)"
-        class="group mt-8 flex relative p-4 rounded-xl border-2 border-transparent cursor-pointer hover:bg-emerald-500/10 hover:border-emerald-500 hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)]"
-      >
-        <EmojiContainer>
-          {{ article.icon }}
-        </EmojiContainer>
-        <div class="flex-1 ml-4">
-          <h3
-            class="text-xl font-medium mb-1.5 text-emerald-500 group-hover:text-emerald-600"
-          >
-            {{ article.title }}
-          </h3>
-          <div v-html="article.content"></div>
-        </div>
+        :post="article"
+        :shared-by="article.sharedBy"
+        :group-name="article.groupName"
+        :author="article.author"
+        variant="main"
+      />
+    </template>
+
+    <template #mobile>
+      <div v-if="loading" class="text-center py-8">
+        <p class="text-gray-500 dark:text-gray-400">Loading posts...</p>
       </div>
-    </div>
-  </main>
+
+      <div v-else-if="error" class="text-center py-8">
+        <p class="text-red-500 dark:text-red-400 mb-2">{{ error }}</p>
+      </div>
+
+      <div v-else-if="articles.length === 0" class="text-center py-8">
+        <p class="text-gray-500 dark:text-gray-400">No posts available yet.</p>
+      </div>
+
+      <PostPreviewCard
+        v-else
+        v-for="article in articles"
+        :key="article.id"
+        :post="article"
+        :shared-by="article.sharedBy"
+        :group-name="article.groupName"
+        :author="article.author"
+        variant="mobile"
+      />
+    </template>
+  </TwoColumnLayout>
 </template>
