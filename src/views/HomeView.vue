@@ -83,12 +83,18 @@ onMounted(async () => {
       }
     })
 
-    if (myGroups.value.length > 0) {
-      const userGroupPosts = mappedPosts.filter(post => post.groupId && myGroups.value.includes(post.groupId))
-      const otherPosts = mappedPosts.filter(post => !post.groupId || !myGroups.value.includes(post.groupId))
-      articles.value = [...userGroupPosts, ...otherPosts]
+    if (auth.isLoggedIn) {
+      // For logged-in users, show their group posts first, then other posts
+      if (myGroups.value.length > 0) {
+        const userGroupPosts = mappedPosts.filter(post => post.groupId && myGroups.value.includes(post.groupId))
+        const otherPosts = mappedPosts.filter(post => !post.groupId || !myGroups.value.includes(post.groupId))
+        articles.value = [...userGroupPosts, ...otherPosts]
+      } else {
+        articles.value = mappedPosts
+      }
     } else {
-      articles.value = mappedPosts
+      // For unauthenticated users, only show posts that are NOT part of any group
+      articles.value = mappedPosts.filter(post => !post.groupId)
     }
   } catch (err) {
     console.error('Failed to fetch posts:', err)

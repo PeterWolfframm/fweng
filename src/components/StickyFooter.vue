@@ -66,7 +66,9 @@ const filteredProfileSubMenuItems = computed(() => {
       item => item.name !== 'login' && item.name !== 'register'
     )
   }
-  return profileSubMenuItems
+  return profileSubMenuItems.filter(
+    item => item.name !== 'overview' && item.name !== 'settings'
+  )
 })
 
 const isActive = (path) => {
